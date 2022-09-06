@@ -232,7 +232,7 @@ shinyServer(
                 #START areaPlot2b code
                 ylabel <- paste("Areas ordered by ",input$party, tunits, "for", racex)
                 xlabel <- paste0(input$party," ",tunits," for ", racex," and ",racey,
-                                 "\nSources: see http://econdataus.com/voting_area.htm")
+                                 "\nSources: see http://econdataus.com/voting_oe.htm")
                 #STOP areaPlot2b code
             }
             else{
@@ -248,56 +248,186 @@ shinyServer(
                     ylabel <- paste(input$party, tunits, "for", racey)
                 }
                 xlabel <- paste0(input$party," ",tunits," for ", racex,
-                                 "\nSources: see http://econdataus.com/voting_area.htm")
+                                 "\nSources: see http://econdataus.com/voting_oe.htm")
             }
             labels <- c(title, xlabel, ylabel)
             return(labels)
         }
         output$myUsage <- renderUI({
-            includeHTML("http://econdataus.com/voting_area.htm")
+            includeHTML("http://econdataus.com/voting_oe.htm")
         })
         output$areaPlot <- renderPlot({
             areaWidth <<- input$areaWidth
             areaHeight <<- input$areaHeight
             dd <- getdata()
+            zdd <<- dd #DEBUG-RM
             dd <- dd[is.na(dd$TOTAL) | dd$TOTAL >= input$minvotes,]
             row.names(dd) <- seq(1:NROW(dd))
-            if (input$xcounty != "" & input$xcounty != "(all)"){
-                dd <- dd[dd$COUNTY == input$xcounty,]
-            }
-            else{
-                dd <- dd[dd$COUNTY != "" & !is.na(dd$COUNTY),]
-            }
             dd <- orderdf(dd,input$xsortcol,input$xsortdesc)
             row.names(dd) <- seq(1,NROW(dd)) # set before removing votes == 0
             if (input$area_x0vote){
                 dd <- dd[dd[4] > 0 & dd[5] > 0,] # delete if DEM or REP votes == 0 
             }
+            zdd2 <<- dd #DEBUG-RM
             xx <- dd
-            xx$Margin <- 100 * (xx[,4] - xx[,5]) / xx$TOTAL
-            
-            xx$Party <- ""
-            if (input$xlimit != ""){
-                vlimit <- as.numeric(unlist(strsplit(input$xlimit, ",")))
-                vparty <- unlist(strsplit(input$xparty, ","))
-                xx$Party <- vparty[length(vparty)]
-                xx$Party[xx[["Margin"]] < vlimit[1]] <- vparty[1]
-                for (i in 1:length(vlimit)){
-                    xx$Party[xx[["Margin"]] >= vlimit[i] & xx[["Margin"]] < vlimit[i+1]] <- vparty[i+1]
+            if (input$top2){
+                gg <- top2plot(xx)
+            }
+            else{
+                xx$Margin <- 100 * (xx[,4] - xx[,5]) / xx$TOTAL
+                
+                xx$Party <- ""
+                if (input$xlimit != ""){
+                    vlimit <- as.numeric(unlist(strsplit(input$xlimit, ",")))
+                    vparty <- unlist(strsplit(input$xparty, ","))
+                    xx$Party <- vparty[length(vparty)]
+                    xx$Party[xx[["Margin"]] < vlimit[1]] <- vparty[1]
+                    for (i in 1:length(vlimit)){
+                        xx$Party[xx[["Margin"]] >= vlimit[i] & xx[["Margin"]] < vlimit[i+1]] <- vparty[i+1]
+                    }
+                }
+                
+                xx$POS   <- 0
+                if (input$showrow){
+                    xx$POS <- 2 # default to right
+                }
+                xx$LABEL <- row.names(xx)
+                spos1 <- unlist(strsplit(input$pos1, ","))
+                xx$POS[xx$LABEL %in% spos1] <- 1
+                spos2 <- unlist(strsplit(input$pos2, ","))
+                xx$POS[xx$LABEL %in% spos2] <- 2
+                spos3 <- unlist(strsplit(input$pos3, ","))
+                xx$POS[xx$LABEL %in% spos3] <- 3
+                xx$VJUST <- 0.5
+                xx$VJUST[xx$POS == 1] <- -1
+                xx$VJUST[xx$POS == 3] <- 2
+                xx$PREPEND <- ""
+                xx$PREPEND[xx$POS == 2] <- "  "
+                xx$LABEL <- paste0(xx$PREPEND,xx$LABEL)
+                xx$LABEL[xx$POS == 0] <- ""
+                title <- paste0(input$xcounty,input$areaname,", ",input$xoffice[1]," - Total Votes and Vote Margin by Area")
+                xlabel <- "Total Votes"
+                ylabel <- "Vote Margin"
+                
+                gxx <<- xx
+                gg <- ggplot(xx, aes(x = TOTAL, y = Margin))
+                gg <- gg + geom_point(aes(color=Party))
+                gg <- gg + ggtitle(title)
+                gg <- gg + xlab(xlabel) + ylab(ylabel)
+                gg <- gg + annotate("text", x = xx$TOTAL, y =xx$Margin, label = xx$LABEL,
+                                    color="red", hjust = 0, vjust = xx$VJUST)
+                isParty <- NULL
+                for (i in 1:length(vparty)){
+                    isParty <- c(isParty, any(xx$Party == vparty[i]))
+                }
+                vcolor <- unlist(strsplit(input$areaColor, ","))
+                vcolor <- vcolor[isParty]
+                if (length(vcolor) > 1){
+                    gg <- gg + scale_fill_manual(values = vcolor) # Bar Plot
+                    gg <- gg + scale_color_manual(values = vcolor) # Line Graph
+                }
+                gg <- addScales(gg,input$areaxscale,input$areayscale)
+            }
+            gg
+        }, width = areaWidth, height = areaHeight)
+        top2plot <- function(dd){
+            tt <- as.numeric(dd[dd$AREA == "TOTAL",])
+            tt <- tt[4:length(tt)]
+            idesc <- order(tt, decreasing = TRUE)
+            idesc <- c(1,2,3,idesc+3)
+            xx <- dd[,idesc]
+            namesxx <- names(xx)
+            namesxx <- gsub("'","",namesxx)
+            names(xx) <- namesxx
+            if (input$units == "Percent"){
+                for (i in 4:NCOL(xx)){
+                    xx[,i] <- 100 * xx[,i] / xx[,3]
                 }
             }
-
+            xx <- xx[xx$COUNTY != "",]
+            names(xx)[4] <- "MARGIN1"
+            names(xx)[5] <- "MARGIN2"
+            zxx2 <<- xx #DEBUG-RM
+            xcounty <- input$xcounty
+            if (input$xdxplot1){
+                xx$MAR_SH <- xx$MARGIN1 - xx$MARGIN2
+                gg <- ggplot(xx, aes_string(x = "MARGIN1", y = "MAR_SH"))
+                ylabel <- paste0("Shift in Margin Vote Share from ",namesxx[5])
+                xlabel <- paste0("Vote Share of ",namesxx[4])
+                xlabel <- paste0(xlabel,"\nSources: see http://econdataus.com/voting_oe.htm")
+                title <- paste0("Shift in Margin Vote Share from ",namesxx[5]," to ",namesxx[4],
+                                " in Race ",input$xraces[1])
+                gg <- gg + ggtitle(title)
+                gg <- gg + xlab(xlabel) + ylab(ylabel)
+            }
+            else{
+                gg <- ggplot(xx, aes_string(x = "MARGIN1", y = "MARGIN2"))
+                ncolor1 <- "black"
+                gg <- gg + geom_abline(intercept=0, slope=1, color=ncolor1, linetype="dashed")
+                if (min(xx$MARGIN1) <= 50 & max(xx$MARGIN1) >= 50){
+                    gg <- gg + geom_vline(xintercept=50, color=ncolor1, linetype="dotted")
+                }
+                if (min(xx$MARGIN2) <= 50 & max(xx$MARGIN2) >= 50){
+                    gg <- gg + geom_hline(yintercept=50, color=ncolor1, linetype="dotted")
+                }
+                if (length(xcounty) > 1){
+                    title <- paste0("Selected counties, TX: Vote Share Margins of Top 2 Candidates in Race ",
+                                    input$xraces[1])
+                }
+                else if (xcounty == "(all)"){
+                    title <- paste0("Selected counties, TX: Vote Share Margins of Top 2 Candidates in Race ",
+                                    input$xraces[1]) # change to All counties once all are present
+                }
+                else{
+                    title <- paste0(xcounty," County, TX: Vote Share Margins of Top 2 Candidates in Race ",
+                                    input$xraces[1])
+                }
+                gg <- gg + ggtitle(title)
+                ylabel <- namesxx[5]
+                xlabel <- namesxx[4]
+                xlabel <- paste0(xlabel,"\nSources: see http://econdataus.com/voting_oe.htm")
+                gg <- gg + xlab(xlabel) + ylab(ylabel)
+            }
+            gg <- gg + geom_point(aes_string(color="COUNTY"), size=3, alpha=as.numeric(input$xalpha))
+            # gg <- gg + ggtitle(title)
+            # gg <- gg + xlab(xlabel) + ylab(ylabel)
+            # gg <- gg + annotate("text", x = xx$TOTAL, y =xx$Margin, label = xx$LABEL,
+            #                     color="red", hjust = 0, vjust = xx$VJUST)
+            # code modified from doAreaPlot2
             xx$POS   <- 0
-            if (input$showrow){
+            if (input$showall1){
                 xx$POS <- 2 # default to right
             }
-            xx$LABEL <- row.names(xx)
-            spos1 <- unlist(strsplit(input$pos1, ","))
-            xx$POS[xx$LABEL %in% spos1] <- 1
-            spos2 <- unlist(strsplit(input$pos2, ","))
-            xx$POS[xx$LABEL %in% spos2] <- 2
-            spos3 <- unlist(strsplit(input$pos3, ","))
-            xx$POS[xx$LABEL %in% spos3] <- 3
+            if (input$label1 == "Index"){
+                xx$LABEL <- row.names(xx)
+            }
+            else if (input$label1 == "County"){
+                xx$LABEL <- xx$COUNTY
+            }
+            else if (input$label1 == "CountyID"){
+                xx$LABEL <- xx$COUNTY
+                # if (input$state2 == "TX"){
+                #     xx$LABEL <- sub("^0+", "", substring(xx$AREA,1,3))
+                # }
+            }
+            else if (input$label1 == "Area"){
+                xx$LABEL <- xx$AREA
+                # if (input$state2 == "TX"){
+                #     xx$LABEL <- sub("^0+", "", substring(xx$AREA,4))
+                # }
+            }
+            else if (input$label1 == "CNTYVTD"){
+                xx$LABEL <- xx$AREA
+            }
+            spos1_1 <- unlist(strsplit(input$pos1_1, ","))
+            xx$POS[xx$AREA %in% spos1_1] <- 1
+            xx$POS[row.names(xx) %in% spos1_1] <- 1
+            spos2_1 <- unlist(strsplit(input$pos2_1, ","))
+            xx$POS[xx$AREA %in% spos2_1] <- 2
+            xx$POS[row.names(xx) %in% spos2_1] <- 2
+            spos3_1 <- unlist(strsplit(input$pos3_1, ","))
+            xx$POS[xx$AREA %in% spos3_1] <- 3
+            xx$POS[row.names(xx) %in% spos3_1] <- 3
             xx$VJUST <- 0.5
             xx$VJUST[xx$POS == 1] <- -1
             xx$VJUST[xx$POS == 3] <- 2
@@ -305,30 +435,53 @@ shinyServer(
             xx$PREPEND[xx$POS == 2] <- "  "
             xx$LABEL <- paste0(xx$PREPEND,xx$LABEL)
             xx$LABEL[xx$POS == 0] <- ""
-            title <- paste0(input$xcounty,input$areaname,", ",input$xoffice[1]," - Total Votes and Vote Margin by Area")
-            xlabel <- "Total Votes"
-            ylabel <- "Vote Margin"
-            
-            gxx <<- xx
-            gg <- ggplot(xx, aes(x = TOTAL, y = Margin))
-            gg <- gg + geom_point(aes(color=Party))
-            gg <- gg + ggtitle(title)
-            gg <- gg + xlab(xlabel) + ylab(ylabel)
-            gg <- gg + annotate("text", x = xx$TOTAL, y =xx$Margin, label = xx$LABEL,
-                                color="red", hjust = 0, vjust = xx$VJUST)
-            isParty <- NULL
-            for (i in 1:length(vparty)){
-                isParty <- c(isParty, any(xx$Party == vparty[i]))
+            if (input$xdxplot1){
+                gg <- gg + annotate("text", x = xx$MARGIN1, y =xx$MAR_SH, label = xx$LABEL,
+                                    hjust = 0, vjust = xx$VJUST)
             }
-            vcolor <- unlist(strsplit(input$areaColor, ","))
-            vcolor <- vcolor[isParty]
-            if (length(vcolor) > 1){
-                gg <- gg + scale_fill_manual(values = vcolor) # Bar Plot
-                gg <- gg + scale_color_manual(values = vcolor) # Line Graph
+            else{
+                gg <- gg + annotate("text", x = xx$MARGIN1, y =xx$MARGIN2, label = xx$LABEL,
+                                    hjust = 0, vjust = xx$VJUST)
             }
-            gg <- addScales(gg,input$areaxscale,input$areayscale)
-            gg
-        }, width = areaWidth, height = areaHeight)
+            xx <- NULL
+            yy <- NULL
+            if(input$xscale1 != ""){
+                sxx <- unlist(strsplit(input$xscale1, ","))
+                xx <- as.numeric(sxx)
+                if (length(sxx) == 3){
+                    gg <- gg + scale_x_continuous(breaks = seq(xx[1],xx[2],xx[3]),
+                                                  minor_breaks = seq(xx[1],xx[2],xx[3]))
+                }
+                else if (length(sxx) == 4){
+                    gg <- gg + scale_x_continuous(breaks = seq(xx[1],xx[2],xx[3]),
+                                                  minor_breaks = seq(xx[1],xx[2],xx[4]))
+                }
+            }
+            if(input$yscale1 != ""){
+                syy <- unlist(strsplit(input$yscale1, ","))
+                yy <- as.numeric(syy)
+                if (length(syy) == 3){
+                    gg <- gg + scale_y_continuous(breaks = seq(yy[1],yy[2],yy[3]),
+                                                  minor_breaks = seq(yy[1],yy[2],yy[3]))
+                }
+                else if (length(syy) == 4){
+                    gg <- gg + scale_y_continuous(breaks = seq(yy[1],yy[2],yy[3]),
+                                                  minor_breaks = seq(yy[1],yy[2],yy[4]))
+                }
+            }
+            if (length(xx) >= 2){
+                if (length(yy) >= 2){
+                    gg <- gg + coord_cartesian(xlim = c(xx[1], xx[2]), ylim = c(yy[1], yy[2]))
+                }
+                else{
+                    gg <- gg + coord_cartesian(xlim = c(xx[1], xx[2]))
+                }
+            }
+            else if (length(yy) >= 2){
+                gg <- gg + coord_cartesian(ylim = c(yy[1], yy[2]))
+            }
+            return(gg)
+        }
         doCvtPlot <- function(xx, xcounty, xtype){
             xx <- xx[is.na(xx$TOTAL) | xx$TOTAL >= input$minvotes,]
             row.names(xx) <- seq(1:NROW(xx))
@@ -715,7 +868,7 @@ shinyServer(
             pp2 <- plot_grid(title, pp, ncol=1, rel_heights=c(0.3, input$aplot2_rows)) # DEBUG-TEST - change 2nd rel_height from 1 to 8 for 24 rows
             filename <- "tmp_areaPlot2s.png"
             # Possibly add option to save files
-            # filename <- paste0("png/voting_area_",input$xoffice[1],"_",input$xoffice[2],"_",
+            # filename <- paste0("png/voting_oe_",input$xoffice[1],"_",input$xoffice[2],"_",
             #                    input$sortcounty,"_",input$sortcountydir,
             #                    input$aplot2_cols,"_",input$aplot2_rows)
             #height <- (input$aplot2_rows * 200) + 60
@@ -1207,7 +1360,7 @@ shinyServer(
                 dd[,2:NCOL(dd)] <- scale(dd[,2:NCOL(dd)])
                 ylabel <- paste("Scaled Margin Vote Share",input$units)
             }
-            ylabel <- paste0(ylabel,"\nSources: see http://econdataus.com/voting_area.htm")
+            ylabel <- paste0(ylabel,"\nSources: see http://econdataus.com/voting_oe.htm")
             title <- getlabels("plotn",input$xcounty,1)
             ee <- dd %>%
                 gather("RACE", "VALUE", -COUNTY)
@@ -1562,7 +1715,7 @@ shinyServer(
             content = function(file){
                 xx <- getAreas()
                 fn <- paste0(input$xoffice[1],"_",input$xcounty,"_",input$units,".csv")
-                catmsg(paste0("====> write_cvs(",fn,")"))
+                catmsg(paste0("====> write_csv(",fn,")"))
                 write_csv(xx, file)
             }
         )
@@ -2138,26 +2291,59 @@ shinyServer(
             catmsg("===== rdata =====")
             capture.output(print(rdata), file = "catlog.txt", append = TRUE)
             rdat <- rdata[rdata$race == race,]
-            filename <- paste0(rdat$election,"__",tolower(input$xcounty),"__precinct.csv")
-            filepath <- paste0("https://raw.githubusercontent.com/openelections/openelections-data-",
-                               tolower(rdat$state),"/master/",rdat$year,"/counties/",filename)
-            catmsg(paste0("filename=",filename)) #DEBUG
-            catmsg(paste0("filepath=",filepath)) #DEBUG
-            if (!exists(filename, envir = .GlobalEnv)){
-                cc <- NULL
-                result = tryCatch({
+            xcounty <- input$xcounty
+            if (length(xcounty) > 1 | (length(xcounty) == 1 & (xcounty[1] == "" | xcounty[1] == "(all)"))){
+                filename <- paste0(rdat$election,"__precinct.csv")
+                filepath <- paste0(data_dir,input$xelection,"__precinct.csv")
+                catmsg(paste0("filename=",filename)) #DEBUG
+                catmsg(paste0("filepath=",filepath)) #DEBUG
+                if (exists(filename, envir = .GlobalEnv)){
+                    #catmsg(paste0("Election object ",filename," exists"))
+                    cc <- get(filename, envir = .GlobalEnv)
+                }
+                if (file.exists(filepath)){
+                    catmsg(paste0("BEFORE read_csv(",filepath,")"))
                     cc <- read_csv(filepath)
+                    catmsg(paste0(" AFTER read_csv(",filepath,")"))
                     assign(filename, cc, envir = .GlobalEnv)
-                }, warning = function(w) {
-                    print(paste0("WARNING: ",w))
-                }, error = function(e) {
-                    print(paste0("ERROR: ",e))
-                }, finally = {
-                    #cleanup-code
-                })
+                }
+                else{
+                    catmsg(paste0("BEFORE getElectionFile()"))
+                    cc <- getElectionFile()
+                    catmsg(paste0(" AFTER getElectionFile()"))
+                    assign(filename, cc, envir = .GlobalEnv)
+                }
+                if (length(xcounty) > 1){
+                    if ("(all)" %in% xcounty){
+                        cc$county[!(cc$county %in% xcounty)] <- "_Other"
+                    }
+                    else{
+                        cc <- cc[cc$county %in% xcounty,]
+                    }
+                }
             }
             else{
-                cc <- get(filename, envir = .GlobalEnv)
+                filename <- paste0(rdat$election,"__",tolower(xcounty),"__precinct.csv")
+                filepath <- paste0("https://raw.githubusercontent.com/openelections/openelections-data-",
+                                   tolower(rdat$state),"/master/",rdat$year,"/counties/",filename)
+                catmsg(paste0("filename=",filename)) #DEBUG
+                catmsg(paste0("filepath=",filepath)) #DEBUG
+                if (exists(filename, envir = .GlobalEnv)){
+                    cc <- get(filename, envir = .GlobalEnv)
+                }
+                else{
+                    cc <- NULL
+                    result = tryCatch({
+                        cc <- read_csv(filepath)
+                        assign(filename, cc, envir = .GlobalEnv)
+                    }, warning = function(w) {
+                        print(paste0("WARNING: ",w))
+                    }, error = function(e) {
+                        print(paste0("ERROR: ",e))
+                    }, finally = {
+                        #cleanup-code
+                    })
+                }
             }
             catmsg(paste0("NROW=",NROW(cc)))
             xx <- cc[cc$office == rdat$office,] #DEBUG-CHECK
@@ -2573,12 +2759,6 @@ shinyServer(
             }
             else{
                 xx <- getrace(races[1])
-                xxxx <<- xx #DEBUG-RM
-                tt <- as.numeric(xx[xx$AREA == "TOTAL",])
-                tt <- tt[4:length(tt)]
-                idesc <- order(tt, decreasing = TRUE)
-                idesc <- c(1,2,3,idesc+3)
-                xx <- xx[,idesc]
                 for (i in 4:NCOL(xx)){
                     if (input$units != "Count"){
                         xx[,i] <- 100 * xx[,i] / xx$TOTAL # xx[,3]
@@ -2803,19 +2983,67 @@ shinyServer(
                 updateSelectInput(session,"xelection",choices = uelections,selected = uelections[1])
             }
         })
+        getElectionfile <- function(){
+            efiles <- cfiles[as.character(cfiles$elections) == input$xelection,]
+            if (input$createfiles){
+                reqcols <- c("county","precinct","office","district","party","candidate","votes")
+                curcols <- reqcols
+                optcols <- NULL
+                enames <- efiles$filenames
+                yy <- NULL
+                for (ename in enames){
+                    print(paste0("BEFORE read_csv(",ename,")")) #DEBUG-RM
+                    filepath <- paste0("https://raw.githubusercontent.com/openelections/openelections-data-",
+                                       tolower(input$state2),"/master/",input$xyear,"/counties/",ename)
+                    xx0 <- read_csv(filepath)
+                    cols0 <- names(xx0)
+                    xx <- xx0[,reqcols]
+                    for (col in optcols){
+                        xx[[col]] <- ""
+                    }
+                    for (col in cols0){
+                        if (col %in% curcols){
+                            if (!(col %in% reqcols)){ # in optcols
+                                xx[[col]] <- xx0[[col]]
+                            }
+                        }
+                        else{
+                            curcols <- c(curcols,col)
+                            optcols <- c(optcols,col)
+                            xx[[col]] <- xx0[[col]]
+                            if (!is.null(yy)){
+                                yy[[col]] <- ""
+                            }
+                        }
+                    }
+                    if (is.null(yy)){
+                        yy <- xx
+                    }
+                    else{
+                        yy <- rbind(yy, xx)
+                    }
+                }
+                zcurcols <<- curcols #DEBUG-RM
+                zzall <<- yy #DEBUG-RM
+                filename <- paste0(data_dir,input$xelection,"__precinct.csv")
+                write_csv(yy, filename)
+            }
+        }
         observeEvent(input$xelection,{
             if (input$xelection != ""){
+                #getElectionfile()
                 efiles <- cfiles[as.character(cfiles$elections) == input$xelection,]
-                ucounties <- unique(efiles$counties)
+                ucounties <- unique(as.character(efiles$counties))
                 xcounty <- input$xcounty
                 if (!(xcounty %in% ucounties)){
                     xcounty <- ucounties[1]
                 }
+                ucounties <- c(ucounties,"(all)")
                 updateSelectInput(session,"xcounty",choices = ucounties,selected = xcounty)
             }
         })
         observeEvent(input$xcounty,{
-            if (input$xcounty != ""){
+            if (input$xcounty != "" & input$xcounty != "(all)"){
                 cfile <- cfiles[as.character(cfiles$elections) == input$xelection & cfiles$counties == input$xcounty,]
                 filename <- as.character(cfile$filename)
                 filepath <- paste0("https://raw.githubusercontent.com/openelections/openelections-data-tx/master/",

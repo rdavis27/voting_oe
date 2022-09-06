@@ -20,7 +20,7 @@ shinyUI(pageWithSidebar(
         selectInput("xcounty", "COUNTY",
                     choices = c("Andrews","Maverick"),
                     selected = "Maverick",
-                    multiple = FALSE),
+                    multiple = TRUE),
         selectInput("xoffice", "OFFICE",
                     choices = c("President",
                                 "U.S. Senate",
@@ -58,7 +58,7 @@ shinyUI(pageWithSidebar(
             textInput("namefmt", "namefmt", value = "%s_%1.1s")
         ),
         splitLayout(
-            numericInput("minvotes","Min Votes",30,min = 0),
+            numericInput("minvotes","Min Votes",20,min = 0),
             numericInput("minvotes2","Min Votes2",0,min = 0)
         ),
         selectInput("dist", "DISTRICT", choices = c(""), selected = ""),
@@ -117,12 +117,20 @@ shinyUI(pageWithSidebar(
             tabPanel("Area Plot",
                 sidebarPanel(
                     width = 3,
-                    checkboxInput("showrow","Show rows",value = TRUE),
-                    textInput("pos1", "Position above", value = ""),
-                    textInput("pos2", "Position right", value = ""),
-                    textInput("pos3", "Position below", value = ""),
-                    textInput("areaxscale", "X From,To,Step,Tick", value = ""),
-                    textInput("areayscale", "Y From,To,Step,Tick", value = ""),
+                    checkboxInput("xdxplot1","x/dx plot (else x/y)",value = FALSE),
+                    splitLayout(
+                        checkboxInput("showall1","Show rows",value = FALSE),
+                        checkboxInput("top2","Top two",value = TRUE)
+                    ),
+                    selectInput("label1", "Label type",
+                                choices = c("Index","County","CountyID","Area","CNTYVTD"),
+                                selected = "Index",
+                                multiple = FALSE),
+                    textInput("pos1_1", "Position above", value = ""),
+                    textInput("pos2_1", "Position right", value = ""),
+                    textInput("pos3_1", "Position below", value = ""),
+                    textInput("xscale1", "X From,To,Step,Tick", value = ""),
+                    textInput("yscale1", "Y From,To,Step,Tick", value = ""),
                     splitLayout(
                         textInput("xlimit","Limit",value = "-5,5"),
                         textInput("xalpha","Alpha",value = "0.5")
