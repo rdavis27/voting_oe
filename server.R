@@ -14,6 +14,7 @@ library(leaflet)
 library(sf)
 library(rgeos)
 library(rvest)
+library(plotly)
 
 areaWidth <- 900
 areaHeight <- 600
@@ -256,7 +257,7 @@ shinyServer(
         output$myUsage <- renderUI({
             includeHTML("http://econdataus.com/voting_oe.htm")
         })
-        output$areaPlot <- renderPlot({
+        output$areaPlot <- renderPlotly({
             areaWidth <<- input$areaWidth
             areaHeight <<- input$areaHeight
             dd <- getdata()
@@ -288,15 +289,15 @@ shinyServer(
                 }
                 
                 xx$POS   <- 0
-                if (input$showrow){
+                if (input$showall1){
                     xx$POS <- 2 # default to right
                 }
                 xx$LABEL <- row.names(xx)
-                spos1 <- unlist(strsplit(input$pos1, ","))
+                spos1 <- unlist(strsplit(input$pos1_1, ","))
                 xx$POS[xx$LABEL %in% spos1] <- 1
-                spos2 <- unlist(strsplit(input$pos2, ","))
+                spos2 <- unlist(strsplit(input$pos2_1, ","))
                 xx$POS[xx$LABEL %in% spos2] <- 2
-                spos3 <- unlist(strsplit(input$pos3, ","))
+                spos3 <- unlist(strsplit(input$pos3_1, ","))
                 xx$POS[xx$LABEL %in% spos3] <- 3
                 xx$VJUST <- 0.5
                 xx$VJUST[xx$POS == 1] <- -1
@@ -326,10 +327,10 @@ shinyServer(
                     gg <- gg + scale_fill_manual(values = vcolor) # Bar Plot
                     gg <- gg + scale_color_manual(values = vcolor) # Line Graph
                 }
-                gg <- addScales(gg,input$areaxscale,input$areayscale)
+                gg <- addScales(gg,input$xscale1,input$yscale1)
             }
-            gg
-        }, width = areaWidth, height = areaHeight)
+            ggplotly(gg) %>% layout(height=input$areaHeight, width=input$areaWidth)
+        })
         top2plot <- function(dd){
             tt <- as.numeric(dd[dd$AREA == "TOTAL",])
             tt <- tt[4:length(tt)]
@@ -355,8 +356,8 @@ shinyServer(
                 ylabel <- paste0("Shift in Margin Vote Share from ",namesxx[5])
                 xlabel <- paste0("Vote Share of ",namesxx[4])
                 xlabel <- paste0(xlabel,"\nSources: see http://econdataus.com/voting_oe.htm")
-                title <- paste0("Shift in Margin Vote Share from ",namesxx[5]," to ",namesxx[4],
-                                " in Race ",input$xraces[1])
+                title <- paste0("Shift in Margins from ",namesxx[5]," to ",namesxx[4],
+                                " in ",input$xraces[1])
                 gg <- gg + ggtitle(title)
                 gg <- gg + xlab(xlabel) + ylab(ylabel)
             }
@@ -371,15 +372,15 @@ shinyServer(
                     gg <- gg + geom_hline(yintercept=50, color=ncolor1, linetype="dotted")
                 }
                 if (length(xcounty) > 1){
-                    title <- paste0("Selected counties, TX: Vote Share Margins of Top 2 Candidates in Race ",
+                    title <- paste0("Selected counties, TX: Margins of Top 2 Candidates in ",
                                     input$xraces[1])
                 }
                 else if (xcounty == "(all)"){
-                    title <- paste0("Selected counties, TX: Vote Share Margins of Top 2 Candidates in Race ",
+                    title <- paste0("Selected counties, TX: Margins of Top 2 Candidates in ",
                                     input$xraces[1]) # change to All counties once all are present
                 }
                 else{
-                    title <- paste0(xcounty," County, TX: Vote Share Margins of Top 2 Candidates in Race ",
+                    title <- paste0(xcounty," County, TX: Margins of Top 2 Candidates in ",
                                     input$xraces[1])
                 }
                 gg <- gg + ggtitle(title)
@@ -388,7 +389,7 @@ shinyServer(
                 xlabel <- paste0(xlabel,"\nSources: see http://econdataus.com/voting_oe.htm")
                 gg <- gg + xlab(xlabel) + ylab(ylabel)
             }
-            gg <- gg + geom_point(aes_string(color="COUNTY"), size=3, alpha=as.numeric(input$xalpha))
+            gg <- gg + geom_point(aes_string(color="COUNTY"), size=as.numeric(input$xsize1), alpha=as.numeric(input$xalpha1))
             # gg <- gg + ggtitle(title)
             # gg <- gg + xlab(xlabel) + ylab(ylabel)
             # gg <- gg + annotate("text", x = xx$TOTAL, y =xx$Margin, label = xx$LABEL,
@@ -542,8 +543,8 @@ shinyServer(
                 xlabel <- "Votes (thousands)"
             }
             gg <- ggplot(zz, aes(x = Votes, y = Share))
-            gg <- gg + geom_point(aes_string(color="Candidate",shape="Candidate"), size=3, alpha=as.numeric(input$xalpha))
-            gg <- gg + geom_line(aes_string(color="Candidate"), size=2, alpha=as.numeric(input$xalpha))
+            gg <- gg + geom_point(aes_string(color="Candidate",shape="Candidate"), size=3, alpha=as.numeric(input$xalpha1))
+            gg <- gg + geom_line(aes_string(color="Candidate"), size=2, alpha=as.numeric(input$xalpha1))
             gg <- gg + geom_vline(aes(xintercept = votesM))
             gg <- gg + ggtitle(title)
             gg <- gg + xlab(xlabel) + ylab(ylabel)
@@ -1309,8 +1310,8 @@ shinyServer(
             #gg <- gg + scale_fill_gradient(low="red", high="green")
             #gg <- ggplot(ee, aes(x = COUNTY, y = VALUE))
             ###gg <- ggplot(ee, aes(y = COUNTY, x = VALUE))
-            #gg <- gg + geom_point(aes_string(color="Candidate",shape="Candidate"), size=3, alpha=as.numeric(input$xalpha))
-            #gg <- gg + geom_line(aes_string(color="RACE"), size=2, alpha=as.numeric(input$xalpha))
+            #gg <- gg + geom_point(aes_string(color="Candidate",shape="Candidate"), size=3, alpha=as.numeric(input$xalpha1))
+            #gg <- gg + geom_line(aes_string(color="RACE"), size=2, alpha=as.numeric(input$xalpha1))
             ###gg <- gg + geom_point(aes_string(color="RACE", shape="RACE"), size=2)
             #   gg <- gg + geom_line(aes_string(color="RACE"), size=2)
             #gg <- gg + geom_line()
@@ -2315,7 +2316,7 @@ shinyServer(
                 }
                 if (length(xcounty) > 1){
                     if ("(all)" %in% xcounty){
-                        cc$county[!(cc$county %in% xcounty)] <- "_Other"
+                        cc$county[!(cc$county %in% xcounty)] <- "(other)"
                     }
                     else{
                         cc <- cc[cc$county %in% xcounty,]

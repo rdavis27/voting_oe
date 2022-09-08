@@ -1,4 +1,5 @@
 library(leaflet)
+library(plotly)
 
 shinyUI(pageWithSidebar(
     headerPanel("Analysis of Reported Voting Areas using Open Elections Data"),
@@ -133,14 +134,15 @@ shinyUI(pageWithSidebar(
                     textInput("yscale1", "Y From,To,Step,Tick", value = ""),
                     splitLayout(
                         textInput("xlimit","Limit",value = "-5,5"),
-                        textInput("xalpha","Alpha",value = "0.5")
+                        textInput("xsize1","Size",value = "2"),
+                        textInput("xalpha1","Alpha",value = "0.5")
                     ),
                     textInput("areaColor","Color",value = "red3,green3,blue3"),
                     textInput("xparty","Party",value = "1_Solid R,2_Toss-Up,3_Solid D"),
                     checkboxInput("area_x0vote","Exclude 0 votes",value = FALSE),
                     splitLayout(
-                        numericInput("areaWidth", "Plot Width", 800),
-                        numericInput("areaHeight", "Plot Height", 600)
+                        numericInput("areaWidth", "Plot Width", 1000),
+                        numericInput("areaHeight", "Plot Height", 800)
                     ),
                     splitLayout(
                         numericInput("plotload", "Load", 1),
@@ -149,7 +151,7 @@ shinyUI(pageWithSidebar(
                 ),
                 mainPanel(
                     width = 9,
-                    plotOutput("areaPlot")
+                    plotlyOutput("areaPlot")
                 )
             ),
             tabPanel("CVT",
