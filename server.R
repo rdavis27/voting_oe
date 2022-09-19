@@ -35,6 +35,11 @@ shinyServer(
             cat(file = catlog, append = TRUE, line)
             cat(file = stderr(), line)
         }
+        catfile <- function(ff,msg){
+            line <- paste0(msg,"\n")
+            cat(file = ff, append = TRUE, line)
+            cat(file = stderr(), line)
+        }
         states <- c("Alabama","Alaska","Arizona","Arkansas","California",
                     "Colorado","Connecticut","Delaware","District of Columbia","Florida",
                     "Georgia","Hawaii","Idaho","Illinois","Indiana",
@@ -46,6 +51,11 @@ shinyServer(
                     "South Carolina","South Dakota","Tennessee","Texas","Utah",
                     "Vermont","Virginia","Washington","West Virginia","Wisconsin",
                     "Wyoming")
+        state2s = c("AK","AL","AR","AZ","CA","CO","CT","DC","DE","FL",
+                    "GA","HI","IA","ID","IL","IN","KS","KY","LA","MA",
+                    "MD","ME","MI","MN","MO","MS","MT","NC","ND","NE",
+                    "NH","NJ","NM","NV","NY","OH","OK","OR","PA","RI",
+                    "SC","SD","TN","TX","UT","VA","VT","WA","WI","WV","WY")
         stabbr <- c("AL","AK","AZ","AR","CA",
                     "CO","CT","DE","DC","FL",
                     "GA","HI","ID","IL","IN",
@@ -346,13 +356,15 @@ shinyServer(
                 }
             }
             xx <- xx[xx$COUNTY != "",]
+            names(xx)[3] <- "Votes"
             names(xx)[4] <- "MARGIN1"
-            names(xx)[5] <- "MARGIN2"
+            names(xx)[5] <- "MARGIN2" #DEBUG-ADD
             zxx2 <<- xx #DEBUG-RM
             xcounty <- input$xcounty
             if (input$xdxplot1){
                 xx$MAR_SH <- xx$MARGIN1 - xx$MARGIN2
-                gg <- ggplot(xx, aes_string(x = "MARGIN1", y = "MAR_SH"))
+                #gg <- ggplot(xx, aes_string(x = "MARGIN1", y = "MAR_SH"))
+                gg <- ggplot(xx, aes_string(x = "MAR_SH", y = "Votes")) #DEBUG-CHANGE
                 ylabel <- paste0("Shift in Margin Vote Share from ",namesxx[5])
                 xlabel <- paste0("Vote Share of ",namesxx[4])
                 xlabel <- paste0(xlabel,"\nSources: see http://econdataus.com/voting_oe.htm")
@@ -2197,6 +2209,8 @@ shinyServer(
             xx <- xx[,col]
             names(xx) <- c("COUNTY","AREA","Office","DIST","TOTAL","Party","Name","Votes")
             xx <- xx[xx$Office == office,] #done before call?
+            xx$Name[is.na(xx$Name)] <- xx$Office[is.na(xx$Name)] #DEBUG-TEST for Registered Voters
+            zxxcreate <<- xx #DEBUG-RM
             if (input$xparty1 != "(all)"){
                 xx <- xx[!is.na(xx$Party) & xx$Party == input$xparty1,]
             }
@@ -2274,7 +2288,8 @@ shinyServer(
                 ii <- c(ii, irep)
             }
             for (j in 4:(NCOL(xx)-1)){
-                if (j %in% idem & j %in% irep){ # check with %in% DEBUG-CHECK!!!
+                #if (j %in% idem & j %in% irep){ # check with %in% DEBUG-CHECK!!!
+                if (!(j %in% idem) & !(j %in% irep)){ # check with %in% DEBUG-CHECK!!!
                     ii <- c(ii, j)
                 }
             }
@@ -2356,6 +2371,7 @@ shinyServer(
                 }
             }
             catmsg(paste0("NROW=",NROW(cc)))
+            zccr <<- cc #DEBUG-RM
             xx <- cc[cc$office == rdat$office,] #DEBUG-CHECK
             catmsg(paste0("NROW=",NROW(xx)," with office == ",rdat$office))
             columns <- c("county","precinct","office","district","total","party","candidate","votes")
@@ -3084,14 +3100,15 @@ shinyServer(
                     filename <- efiles$filenames
                     filepath <- paste0("https://raw.githubusercontent.com/openelections/openelections-data-",
                                        tolower(input$state2),"/master/",input$xyear,"/",filename)
-                    cc <- read_csv(filepath)
+                    xx <- read_csv(filepath)
+                    validate_counties(xx, input$xelection)
                     data_path <- "data"
                     if (file.exists(data_path)){
                         fn <- paste0(data_path,"/",filename)
                         catmsg(paste0("====> write_csv(",fn,")"))
-                        write_csv(cc, fn)
+                        write_csv(xx, fn)
                     }
-                    ucounties <- unique(cc$county)
+                    ucounties <- unique(xx$county)
                 }
                 xcounty <- input$xcounty
                 if (!(xcounty %in% ucounties)){
@@ -3120,10 +3137,10 @@ shinyServer(
                 }
                 #print(filepath) #DEBUG-RM
                 if (!exists(filename, envir = .GlobalEnv)){
-                    cc <- NULL
+                    xx <- NULL
                     result = tryCatch({
-                        cc <- read_csv(filepath)
-                        assign(filename, cc, envir = .GlobalEnv)
+                        xx <- read_csv(filepath)
+                        assign(filename, xx, envir = .GlobalEnv)
                     }, warning = function(w) {
                         print(paste0("WARNING in observeEvent(xcounty): ",w))
                     }, error = function(e) {
@@ -3133,11 +3150,11 @@ shinyServer(
                     })
                 }
                 else{
-                    cc <- get(filename, envir = .GlobalEnv)
+                    xx <- get(filename, envir = .GlobalEnv)
                 }
-                print(head(cc)) #DEBUG-RM
-                zcc <<- cc
-                uoffices <- unique(cc$office)
+                print(head(xx)) #DEBUG-RM
+                zxx <<- xx
+                uoffices <- unique(xx$office)
                 xoffice <- input$xoffice
                 if (!(xoffice %in% uoffices)){
                     xoffice <- uoffices[1]
@@ -3186,8 +3203,74 @@ shinyServer(
             }
             #getCounties() #DEBUG-CHECK - COMMENT OUT
         })
+        observeEvent(input$checkstate,{
+            check_state(input$state2)
+        })
+        observeEvent(input$checkall,{
+            for (ss in state2s){
+                check_state(ss)
+            }
+        })
         observe({
             catmsg(paste0("v3: ",input$state2," ",input$tabs))
         })
+        check_state <- function(state2){
+            ff <- "check_state.txt"
+            if (toupper(state2) == "WI"){
+                areaname <- "ward"
+            }
+            else{
+                areaname <- "precinct"
+            }
+            xelection <- input$xelection
+            mm <- str_match(xelection,"(\\d+)\\_\\_([A-Za-z]{2})\\_\\_([A-Za-z\\_]+)")
+            filename <- paste0(mm[1,2],"__",tolower(state2),"__",mm[1,4],"__",areaname,".csv")
+            xelection2 <- paste0(mm[1,2],"__",tolower(state2),"__",mm[1,4])
+            filepath <- paste0("https://raw.githubusercontent.com/openelections/openelections-data-",
+                               tolower(state2),"/master/",input$xyear,"/",filename)
+            catfile(ff,paste0("########## START check_state(",state2,"), filename=",filename))
+            result = tryCatch({
+                xx <- read_csv(filepath)
+                if (toupper(state2) == "WI"){
+                    names(xx)[names(xx) == "ward"] <- "precint"
+                }
+                reqcols <- c("county","precinct","office","district","party","candidate","votes")
+                for (col in reqcols){
+                    if (!(col %in% names(xx))){
+                        catfile(ff,paste0("=========> ",filename," missing column ",col))
+                    }
+                }
+                ucounties <- unique(xx$county)
+                for (cc in ucounties){
+                    yy <- xx[xx$county == cc,]
+                    nna <- sum(is.na(yy$precinct))
+                    if (nna > 0){
+                        catfile(ff,paste0("  ",nna," of ",NROW(yy)," precints are NA in ",xelection2,", county ",cc))
+                    }
+                }
+            # }, warning = function(w) {
+            #     catfile(ff,paste0("WARNING in check_state(",state2,"): ",w))
+            }, error = function(e) {
+                catfile(ff,paste0("ERROR in check_state(",state2,"): ",e))
+            }, finally = {
+                #cleanup-code
+            })
+        }
+        validate_counties <- function(xx, xelection){
+            reqcols <- c("county","precinct","office","district","party","candidate","votes")
+            for (col in reqcols){
+                if (!(col %in% names(xx))){
+                    catmsg(paste0("########## ",filename," missing column ",col))
+                }
+            }
+            ucounties <- unique(xx$county)
+            for (cc in ucounties){
+                yy <- xx[xx$county == cc,]
+                nna <- sum(is.na(yy$precinct))
+                if (nna > 0){
+                    catmsg(paste0("########## ",nna," of ",NROW(yy)," precints are NA in ",xelection,", county ",cc))
+                }
+            }
+        }
     }
 )

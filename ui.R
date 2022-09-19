@@ -311,6 +311,10 @@ shinyUI(pageWithSidebar(
             tabPanel("CompareN",
                      sidebarPanel(
                          width = 2,
+                         actionButton("checkstate", "Check State",
+                                      style="color: #fff; background-color: #337ab7; border-color: #2e6da4"),
+                         actionButton("checkall", "Check All",
+                                      style="color: #fff; background-color: #337ab7; border-color: #2e6da4"),
                          downloadButton("getcsvN","Get CSV"),
                          downloadButton("getexcelN","Get Excel"),
                          checkboxInput("bycounty", "By County", value = FALSE),
