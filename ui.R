@@ -326,7 +326,7 @@ shinyUI(pageWithSidebar(
                          textInput("xshape_n", "Shapes (plotN)", "16,17,15,1,2,0"),
                          textInput("hm_colors", "Colors", "red,green"),
                          textInput("hm_limits", "Limits", "0,0"),
-                         textInput("racefmt", "Race Format", "12_19_16"),
+                         textInput("racefmt", "Race Format", "12_10_16"),
                          numericInput("hm_width", "Width", 800),
                          numericInput("hm_height", "Height", 800)
                      ),

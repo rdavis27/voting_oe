@@ -2631,8 +2631,8 @@ shinyServer(
                 #yr <- as.numeric(substr(races[1],4,7))
                 yr <- as.numeric(substr(races[1],4,5)) + 2000 #DEBUG-CHECK
             }
-            dd <- fixrace(dd)
-            dd <- modarea(dd, yr)
+            dd <- fixrace(dd)     # clean AREA, like removing leading PRECINCT
+            dd <- modarea(dd, yr) # modify AREA
             zdd1 <<- dd #DEBUG-RM
             dd
         })
@@ -2803,7 +2803,12 @@ shinyServer(
                         sep  <- substr(rf,3,3)
                         from <- as.numeric(substr(rf,4,4))
                         to   <- as.numeric(substr(rf,5,5))
-                        racen <- paste0(racen,sep,substr(unlist(rsplit)[3],from,to))
+                        if (to < from){
+                            racen <- paste0(racen,sep,substring(unlist(rsplit)[3],from))
+                        }
+                        else{
+                            racen <- paste0(racen,sep,substr(unlist(rsplit)[3],from,to))
+                        }
                     }
                     if (length(unlist(rsplit)) > 3){
                         sep  <- substr(rf,6,6)
@@ -3208,7 +3213,7 @@ shinyServer(
         observeEvent(input$xcounty,{
             print(paste0("START observeEvent(",input$xcounty,")"))
             xcounty <- input$xcounty
-            if (length(xcounty) > 0 & xcounty[1] != "" & xcounty[1] != "(all)"){
+            if (length(xcounty) > 0 & xcounty[1] != "" & (xcounty[1] != "(all)" | !input$countyfiles)){
                 if(input$countyfiles){
                     cfile <- cfiles[as.character(cfiles$elections) == input$xelection & cfiles$counties == xcounty[1],]
                     filename <- as.character(cfile$filenames)
@@ -3243,6 +3248,9 @@ shinyServer(
                 }
                 else{
                     xx <- get(filename, envir = .GlobalEnv)
+                }
+                if (xcounty[1] != "(all)"){
+                    xx <- xx[xx$county == xcounty[1],]
                 }
                 print(head(xx)) #DEBUG-RM
                 uoffices <- unique(xx$office)
