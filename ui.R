@@ -52,6 +52,10 @@ shinyUI(pageWithSidebar(
             #selectInput("dist", "DISTRICT", choices = c(""), selected = ""),
         #),
         splitLayout(
+            checkboxInput("sumparty","Sum multiparty",value = FALSE),
+            checkboxInput("topparty","Top multiparty",value = FALSE)
+        ),
+        splitLayout(
             textInput("areamod", "AREA modify", value = "#=TOTAL>MERGE"),
             textInput("areafilter", "filter", value = "")
         ),
@@ -160,12 +164,22 @@ shinyUI(pageWithSidebar(
                          width = 3,
                          textInput("xscale", "X From,To,Step,Tick", value = ""),
                          textInput("yscale", "Y From,To,Step,Tick", value = ""),
-                         textInput("xcolor","Color",value = "blue3,red3,orange,green3,violet"),
+                         textInput("xcolor","Color",value = "red2,blue2,green3,violet,cyan,orange"),
                          textInput("xshape","Shape",value = "3,8,0,1,2,15,16,17"),
                          numericInput("cvt_window","Rolling window",0,min = 0),
                          checkboxInput("cvt_x0vote","Exclude 0 votes",value = FALSE),
                          checkboxInput("votes1000","Votes in 1000s",value = TRUE),
                          checkboxInput("plotbyarea","Plot by Area",value = TRUE),
+                         splitLayout(
+                             textInput("xpsize_cvt","Point",value = "1"),
+                             textInput("xlsize_cvt","Line",value = "1"),
+                             textInput("xalpha_cvt","Alpha",value = "0.5")
+                         ),
+                         textInput("race_indices","Race indices",value = "1"),
+                         selectInput("cvt_party", "CVT party",
+                                     choices = c("DEM","REP","(both)"),
+                                     selected = "REP",
+                                     multiple = FALSE),
                          splitLayout(
                              numericInput("plotload", "Load", 1),
                              actionButton("plotsave", "Save")

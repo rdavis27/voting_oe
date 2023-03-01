@@ -506,56 +506,100 @@ shinyServer(
             }
             return(gg)
         }
-        doCvtPlot <- function(xx, xcounty, xtype){
-            xx <- xx[is.na(xx$TOTAL) | xx$TOTAL >= input$minvotes,]
-            row.names(xx) <- seq(1:NROW(xx))
-            if (input$cvt_x0vote){
-                xx <- xx[xx[4] > 0 & xx[5] > 0,] # delete if DEM or REP votes == 0 
+        doCvtPlot <- function(iraces, xcounty, xtype, xparty){
+            races <- input$xraces
+            nraces <- length(iraces)
+            zz <- NULL
+            for (i in 1:nraces){
+                ii <- iraces[i]
+                xx <- getrace(races[ii])
+                if (is.null(xx)){
+                    next
+                }
+                xx <- xx[is.na(xx$TOTAL) | xx$TOTAL >= input$minvotes,]
+                if (is.null(xx)){
+                    next
+                }
+                row.names(xx) <- seq(1:NROW(xx))
+                if (input$cvt_x0vote){
+                    xx <- xx[xx[4] > 0 & xx[5] > 0,] # delete if DEM or REP votes == 0 
+                }
+                if (xcounty != "" & xcounty != "(all)"){
+                    xx <- xx[xx$COUNTY == xcounty,]
+                }
+                else{
+                    xx <- xx[xx$COUNTY != "" & !is.na(xx$COUNTY),] # removes TOTAL
+                }
+                votesM <- getDeltaM(xx, xcounty)[2]
+                if (NROW(xx) == 0){
+                    next
+                }
+                yy <- xx
+                yy <- orderdf(yy,input$xsortcol,input$xsortdesc)
+                names(yy)[3] <- "Votes"
+                if (input$cvt_window > 0){
+                    nn <- input$cvt_window
+                    totsum <- roll_sum(unlist(yy[3]),nn)
+                    demsum <- roll_sum(unlist(yy[4]),nn)
+                    repsum <- roll_sum(unlist(yy[5]),nn)
+                }
+                yy[3] <- cumsum(yy[3])
+                for (i in 4:NCOL(yy)){
+                    yy[i] <- 100 * cumsum(yy[i]) / yy[3]
+                }
+                if (input$plotbyarea){
+                    len <- length(unlist(yy[3]))
+                    yy[3] <- seq(1:len)
+                    votesM <- median(seq(1:len))
+                }
+                if (input$cvt_window > 0){
+                    yy$Dem_SMA <- NA
+                    yy$Rep_SMA <- NA
+                    yy$Dem_SMA[nn:NROW(yy)] <- 100 * demsum / totsum
+                    yy$Rep_SMA[nn:NROW(yy)] <- 100 * repsum / totsum
+                }
+                if (nraces > 1){
+                    office1 <- substring(races[ii],11)
+                    office1 <- gsub(" ","_",office1)
+                    yr1 <- substring(races[ii],4,5)
+                    if (input$cvt_party == "DEM"){
+                        yy <- yy[,1:4]
+                        names(yy)[4] <- paste0(yr1,"_",office1,"_D")
+                    }
+                    else if (input$cvt_party == "REP"){
+                        yy <- yy[,c(1,2,3,5)]
+                        names(yy)[4] <- paste0(yr1,"_",office1,"_R")
+                    }
+                    else{
+                        yy <- yy[,1:5]
+                        names(yy)[4] <- paste0(yr1,"_",office1,"_D")
+                        names(yy)[5] <- paste0(yr1,"_",office1,"_R")
+                    }
+                    aa <- gather(yy, "Candidate", "Share", 4:NCOL(yy))
+                    aa$Candidate <- factor(aa$Candidate, levels = names(yy)[4:NCOL(yy)])
+                    zz <- rbind(zz,aa)
+                }
+                else{
+                    zz <- gather(yy, "Candidate", "Share", 4:NCOL(yy))
+                    zz <- zz[!startsWith(zz$Candidate,"Write.in") & !startsWith(zz$Candidate,"IND") &
+                                 !startsWith(zz$Candidate,"WRI") & zz$Candidate != "SCATTERING",]
+                    zz$Candidate <- factor(zz$Candidate, levels = names(yy)[4:NCOL(yy)])
+                }
             }
-            if (xcounty != "" & xcounty != "(all)"){
-                xx <- xx[xx$COUNTY == xcounty,]
+            if (nraces > 1){
+                race1 <- "Selected Races"
             }
             else{
-                xx <- xx[xx$COUNTY != "" & !is.na(xx$COUNTY),] # removes TOTAL
+                office1 <- substring(input$xraces[iraces[1]],11)
+                yr1 <- substring(input$xraces[iraces[1]],4,5)
+                race1 <- paste0("20",yr1," ",office1)
             }
-            votesM <- getDeltaM(xx, xcounty)[2]
-            yy <- xx
-            yy <- orderdf(yy,input$xsortcol,input$xsortdesc)
-            names(yy)[3] <- "Votes"
-            if (input$cvt_window > 0){
-                nn <- input$cvt_window
-                totsum <- roll_sum(unlist(yy[3]),nn)
-                demsum <- roll_sum(unlist(yy[4]),nn)
-                repsum <- roll_sum(unlist(yy[5]),nn)
-            }
-            yy[3] <- cumsum(yy[3])
-            for (i in 4:NCOL(yy)){
-                yy[i] <- 100 * cumsum(yy[i]) / yy[3]
-            }
-            if (input$plotbyarea){
-                len <- length(unlist(yy[3]))
-                yy[3] <- seq(1:len)
-                votesM <- median(seq(1:len))
-            }
-            if (input$cvt_window > 0){
-                yy$Dem_SMA <- NA
-                yy$Rep_SMA <- NA
-                yy$Dem_SMA[nn:NROW(yy)] <- 100 * demsum / totsum
-                yy$Rep_SMA[nn:NROW(yy)] <- 100 * repsum / totsum
-            }
-            zz <- gather(yy, "Candidate", "Share", 4:NCOL(yy))
-            zz <- zz[!startsWith(zz$Candidate,"Write.in") & !startsWith(zz$Candidate,"IND") &
-                         !startsWith(zz$Candidate,"WRI") & zz$Candidate != "SCATTERING",]
-            zz$Candidate <- factor(zz$Candidate, levels = names(yy)[4:NCOL(yy)])
-            xsortdir <- "Ascending"
-            if (input$xsortdesc) xsortdir <- "Desc"
-            office1 <- substring(input$xraces[1],11)
-            yr1 <- substring(input$xraces[1],4,5)
-            race1 <- paste0("20",yr1," ",office1)
             if (xtype >= 2){
                 title <- paste0(xcounty,input$areaname,", ",race1)
             }
             else{
+                xsortdir <- "Ascending"
+                if (input$xsortdesc) xsortdir <- "Desc"
                 title <- paste0(xcounty,input$areaname,", ",race1," - Cumulative Vote Tally, ordered by ",names(zz)[input$xsortcol],", ",xsortdir)
             }
             xlabel <- "Votes"
@@ -569,14 +613,16 @@ shinyServer(
                 xlabel <- "Votes (thousands)"
             }
             gg <- ggplot(zz, aes(x = Votes, y = Share))
-            gg <- gg + geom_point(aes_string(color="Candidate",shape="Candidate"), size=3, alpha=as.numeric(input$xalpha1))
-            gg <- gg + geom_line(aes_string(color="Candidate"), size=2, alpha=as.numeric(input$xalpha1))
+            gg <- gg + geom_point(aes_string(color="Candidate",shape="Candidate"),
+                                  size=as.numeric(input$xpsize_cvt), alpha=as.numeric(input$xalpha_cvt))
+            gg <- gg + geom_line(aes_string(color="Candidate"),
+                                 size=as.numeric(input$xlsize_cvt), alpha=as.numeric(input$xalpha_cvt))
             gg <- gg + geom_vline(aes(xintercept = votesM))
             gg <- gg + ggtitle(title)
             gg <- gg + xlab(xlabel) + ylab(ylabel)
             vcolor <- unlist(strsplit(input$xcolor, ","))
             if (length(vcolor) > 1){
-                ncand <- NCOL(yy)-3
+                ncand <- (NCOL(yy)-3)*nraces #fix for multiple races
                 vcolor <- rep(vcolor, length.out=ncand)
                 if (input$cvt_window > 0){
                     vcolor[ncand-1] <- "lightblue"
@@ -614,7 +660,8 @@ shinyServer(
         }
         output$cvtPlot <- renderPlot({
             xx <- getdata()
-            doCvtPlot(xx, input$xcounty, 1)
+            vindices <- as.numeric(unlist(strsplit(input$race_indices, ",")))
+            doCvtPlot(vindices, input$xcounty, 1, input$cvt_party)
         })
         output$cvtPlots <- renderPlot({
             xx <- getdata()
@@ -624,11 +671,16 @@ shinyServer(
             imx <- min(nn, (1+nrow(cc)-ist))
             pp <- NULL
             for (i in 1:nn) pp[[i]] <- ggplot() + theme_void()
-            for (i in 1:imx) pp[[i]] <- doCvtPlot(xx, cc[(ist+i-1),"COUNTY"], 2)
+            vindices <- as.numeric(unlist(strsplit(input$race_indices, ",")))
+            for (i in 1:imx){
+                catmsg(paste0("##### COUNTY=",cc[(ist+i-1),"COUNTY"]," #####"))
+                pp[[i]] <- doCvtPlot(vindices, cc[(ist+i-1),"COUNTY"], 2, input$cvt_party)
+            }
             plot_grid(plotlist = pp, ncol = input$cvt_cols)
         #})
         #}, height = 9000, width = 1000) #45 rows
-        }, height = 600, width = 1000)
+        #}, height = 600, width = 1000)
+        }, height = 800, width = 1200)
         doAreaPlot2 <- function(xx, xcounty, xtype){
             if (xcounty != "" & xcounty != "(all)"){
                 xx <- xx[toupper(xx$COUNTY) == toupper(xcounty),]
@@ -2482,7 +2534,26 @@ shinyServer(
             }
             else if (length(idem) > 1){
                 catmsg(paste0("##### WARNING: race has multiple DEMs"))
-                idem <- idem[1]
+                zmd0 <<- xx0 #DEBUG-RM
+                zmdp <<- xxparty #DEBUG-RM
+                if (input$sumparty){
+                    xxparty[idem[1]] <- "DEM"
+                    names(xx0)[idem[1]] <- "DEM"
+                    for (i in 2:length(idem)){
+                        xx0[idem[1]] <- xx0[idem[1]] + xx0[idem[i]]
+                        xx0[idem[i]] <- 0
+                        xxparty[idem[i]] <- ""
+                    }
+                    idem <- idem[1]
+                }
+                else if (input$topparty){
+                    dsums <- colSums(xx0[,idem])
+                    imax <- which.max(dsums)
+                    idem <- idem[imax]
+                }
+                else{
+                    idem <- idem[1]
+                }
             }
             if (length(irep) == 0){
                 catmsg(paste0("##### WARNING: race has no REP"))
@@ -2491,8 +2562,27 @@ shinyServer(
                 xxparty <- c(xxparty,"REP")
             }
             else if (length(irep) > 1){
+                zmr0 <<- xx0 #DEBUG-RM
+                zmrp <<- xxparty #DEBUG-RM
                 catmsg(paste0("##### WARNING: race has multiple REPs"))
-                irep <- irep[1]
+                if (input$sumparty){
+                    xxparty[irep[1]] <- "REP"
+                    names(xx0)[irep[1]] <- "REP"
+                    for (i in 2:length(irep)){
+                        xx0[irep[1]] <- xx0[irep[1]] + xx0[irep[i]]
+                        xx0[irep[i]] <- 0
+                        xxparty[irep[i]] <- ""
+                    }
+                    irep <- irep[1]
+                }
+                else if (input$topparty){
+                    rsums <- colSums(xx0[,irep])
+                    imax <- which.max(rsums)
+                    irep <- irep[imax]
+                }
+                else{
+                    irep <- irep[1]
+                }
             }
             
             # if (NCOL(xx0) > 5){
@@ -2507,7 +2597,7 @@ shinyServer(
             # }
             ii <- c(1,2,3,idem,irep)
             for (i in 4:NCOL(xx0)){
-                if (i != idem & i != irep) ii <- c(ii,i)
+                if (i != idem & i != irep & xxparty[i] != "") ii <- c(ii,i)
             }
             xx <- xx0[,ii] # COUNTY,AREA,TOTAL,DEM1,REP1,...
             xx <- as.data.frame(xx)
