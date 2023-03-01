@@ -164,7 +164,7 @@ shinyUI(pageWithSidebar(
                          width = 3,
                          textInput("xscale", "X From,To,Step,Tick", value = ""),
                          textInput("yscale", "Y From,To,Step,Tick", value = ""),
-                         textInput("xcolor","Color",value = "red2,blue2,green3,violet,cyan,orange"),
+                         textInput("xcolor","Color",value = "blue2,red2,green3,violet,cyan,orange"),
                          textInput("xshape","Shape",value = "3,8,0,1,2,15,16,17"),
                          numericInput("cvt_window","Rolling window",0,min = 0),
                          checkboxInput("cvt_x0vote","Exclude 0 votes",value = FALSE),
