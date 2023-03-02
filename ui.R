@@ -109,6 +109,28 @@ shinyUI(pageWithSidebar(
                     verbatimTextOutput("myTextCounties")
                 )
             ),
+            tabPanel(
+                "Map",
+                sidebarPanel(
+                    width = 3,
+                    selectInput("maplimitset1", "Map Limits",
+                                choices = c("Auto set to min,max",
+                                            "Auto set balanced",
+                                            "Use value(s) below"),
+                                selected = "Auto set to min,max",
+                                multiple = FALSE),
+                    textInput("maplimits1", NULL, value = "-100,100"),
+                    selectInput("mapvar1", "Map Variable",
+                                choices = c("AREAS","VOTES","deltaM","deltaMxV","totalM","votesM"),
+                                selected = "VOTES",
+                                multiple = FALSE),
+                    textInput("mapcolors1", "Map Colors", value = "Blues")
+                ),
+                mainPanel(
+                    width = 9,
+                    leafletOutput("myLeaflet", height = "800px")
+                )
+            ),
             tabPanel("Areas",
                      sidebarPanel(
                          width = 2,
@@ -116,7 +138,7 @@ shinyUI(pageWithSidebar(
                          downloadButton("getexcel","Get Excel")
                      ),
                      mainPanel(
-                         width = 12,
+                         width = 10,
                          verbatimTextOutput("myTextAreas")
                      )
             ),
@@ -413,7 +435,7 @@ shinyUI(pageWithSidebar(
                             tabPanel("Leaflet",
                                 mainPanel(
                                     width = 10,
-                                    leafletOutput("myLeaflet", height = "800px")
+                                    leafletOutput("myIndLeaflet", height = "800px")
                                 )
                             )
                         )

@@ -3,7 +3,6 @@ library(readxl)
 library(ggplot2)
 library(reshape2)
 
-library(tigris)
 library(leaflet)
 library(htmltools)
 library(xlsx)
@@ -13,6 +12,7 @@ library(jsonlite)
 library(leaflet)
 library(sf)
 library(rgeos)
+library(tigris)
 library(rvest)
 library(plotly)
 
@@ -1246,6 +1246,65 @@ shinyServer(
             }
             dd
         })
+        output$myLeaflet <- renderLeaflet({
+            dd <- getCounties()
+            zzdd <<- dd #DEBUG-RM
+            if (is.null(dd)){
+                print("##### ERROR in myLeaflet: getdata() returned NULL")
+                return(dd)
+            }
+            # COUNTY, AREAS, VOTES, deltaM, deltaMxV, totalM, votesM
+            dd <- dd[dd$COUNTY != "TOTAL",]
+            #zdd <<- dd #DEBUG-RM
+
+            mapvar <- input$mapvar1
+            ee <- dd[!is.na(dd[[mapvar]]),]
+            if (input$maplimitset1 == "Auto set to min,max"){
+                minlimit <- floor(min(ee[[mapvar]]))
+                maxlimit <- ceiling(max(ee[[mapvar]]))
+                maplimits <- paste0(minlimit,",",maxlimit)
+                updateTextInput(session, "maplimits1", value = maplimits)
+            }
+            else if (input$maplimitset1 == "Auto set balanced"){
+                minlimit <- floor(min(ee[[mapvar]]))
+                maxlimit <- ceiling(max(ee[[mapvar]]))
+                abslimit <- max(abs(minlimit), abs(maxlimit))
+                stepsize <- ceiling(abslimit/5)
+                abslimit <- ceiling(abslimit/stepsize) * stepsize
+                maplimits <- paste0("-",abslimit,",",abslimit,",",stepsize)
+                updateTextInput(session, "maplimits1", value = maplimits)
+            }
+            limits <- unlist(strsplit(input$maplimits1, ","))
+            if (length(limits) <= 2){
+                pal <- colorNumeric(input$mapcolors1, dd[[mapvar]])
+            }
+            else if (length(limits) == 3){
+                bins <- seq.int(limits[1], limits[2], limits[3])
+                pal <- colorBin(input$mapcolors1, domain = dd[[mapvar]], bins = bins)
+            }
+            else{
+                bins <- limits
+                pal <- colorBin(input$mapcolors1, domain = dd[[mapvar]], bins = bins)
+            }
+
+            istate <- which(stabbr %in% input$state2)
+            counties <- rgdal::readOGR("gz_2010_us_050_00_20m.json")
+            counties <- counties[counties$STATE == statsd[istate],]
+            cc <- st_as_sf(counties)
+            cc$NAME   <- toupper(cc$NAME)
+            dd$COUNTY <- toupper(dd$COUNTY)
+            ee <- cc %>% left_join(dd, by = c("NAME" = "COUNTY"))
+            ee$var <- ee[[mapvar]]
+            titletext <- paste0("<b>",input$mapvar1," in ",input$xraces[1]," race by County</b><br>")
+            mm <- leaflet(ee) %>%
+                addTiles() %>%
+                addControl(titletext, position = "topright", className="map-title") %>%
+                addPolygons(stroke = FALSE, smoothFactor = 0.3, fillOpacity = 0.5,
+                            fillColor = ~pal(var),
+                            label = ~paste0(NAME, ": ", formatC(var, big.mark = ","))) %>%
+                addLegend(pal = pal, values = ~(var), opacity = 1.0, title = input$mapvar1)
+            #return(mm)
+        })
         getAreas <- function(){
             dd <- getdata()
             if (is.null(dd)){
@@ -1725,7 +1784,7 @@ shinyServer(
             gg <- gg + ggtitle(title) + ylab(ylabel)
             return(gg)
         })
-        output$myLeaflet <- renderLeaflet({
+        output$myIndLeaflet <- renderLeaflet({
             #dd <- getdata() # COUNTY,DEM1,REP1,MARGIN1,TOTAL1,DEM2,REP2,MARGIN2,TOTAL2,
             # DEM_SH,REP_SH,MAR_SH,TOT_SH,DEM1_N,REP1_N,MAR1_N,TOT1_N,TOT2_N
             dp <- input$decimals2
