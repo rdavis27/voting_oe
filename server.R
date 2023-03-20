@@ -1244,6 +1244,20 @@ shinyServer(
                     dd[,i] <- format(dd[,i], big.mark=",", scientific=FALSE)
                 }
             }
+            if (length(input$xraces) > 1){
+                dd$both  <- 0
+                dd$left  <- 0
+                dd$right <- 0
+                ee <- getAreas2()
+                zee <<- ee #DEBUG-RM
+                for (i in 1:NROW(dd)){
+                    ff <- ee[toupper(ee$COUNTY) == toupper(dd$COUNTY[i]),]
+                    dd$both[i]  <- NROW(ff[!is.na(ff$TOTAL1) & !is.na(ff$TOTAL2),])
+                    dd$left[i]  <- NROW(ff[!is.na(ff$TOTAL1) &  is.na(ff$TOTAL2),])
+                    dd$right[i] <- NROW(ff[ is.na(ff$TOTAL1) & !is.na(ff$TOTAL2),])
+                }
+                dd <- dd[,c(1,2,3,8:10,4:7)]
+            }
             dd
         })
         output$myLeaflet <- renderLeaflet({
@@ -2335,13 +2349,21 @@ shinyServer(
             xx <- xx[xx$Office == office,] #done before call?
             xx$Name[is.na(xx$Name)] <- xx$Office[is.na(xx$Name)] #DEBUG-TEST for Registered Voters
             zxxcreate <<- xx #DEBUG-RM - cleaned input before xparty1 and NA check
-            if (input$xparty1 != "(all)"){
-                xx <- xx[!is.na(xx$Party) & xx$Party == input$xparty1,]
-            }
             xx$Name <- gsub("OVER VOTE", "Overvote", xx$Name,ignore.case = TRUE)
             xx$Name <- gsub("UNDER VOTE","Undervote",xx$Name,ignore.case = TRUE)
             xx$Party[is.na(xx$Party)] <- "UNK"
             xx$Party[xx$Party == "STATS"] <- "VOTE"
+            if (input$xparty1 == "(all valid votes)"){
+                #xx <- xx[!(grepl("Overvote",xx$Name) | grepl("Undervote",xx$Name)),]
+                xx <- xx[!(toupper(xx$Name) %in% c("OVERVOTES","UNDERVOTES")),]
+            }
+            else if (input$xparty1 %in% c("OVERVOTES","UNDERVOTES")){
+                xx <- xx[!is.na(xx$Name) & toupper(xx$Name) == input$xparty1,]
+            }
+            else if (input$xparty1 != "(all)"){
+                xx <- xx[!is.na(xx$Party) & toupper(xx$Party) == input$xparty1,]
+            }
+            zxx <<- xx #DEBUG-RM
             # Check District and TOTAL, if necessary
             # if (input$xcounty == "(all)" OR namefmt == ""){
             #     xx$Name <- "Other" except for DEM and REP

@@ -46,7 +46,7 @@ shinyUI(pageWithSidebar(
         #textInput("xarea", "AREA", value = ""),
         #splitLayout(
             selectInput("xparty1", "PARTY",
-                        choices = c("DEM","REP","(all)"),
+                        choices = c("DEM","REP","OVERVOTES","UNDERVOTES","(all valid votes)","(all)"),
                         selected = "(all)",
                         multiple = FALSE),
             #selectInput("dist", "DISTRICT", choices = c(""), selected = ""),
