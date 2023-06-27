@@ -47,7 +47,7 @@ shinyUI(pageWithSidebar(
         #splitLayout(
             selectInput("xparty1", "PARTY",
                         choices = c("DEM","REP","OVERVOTES","UNDERVOTES","(all valid votes)","(all)"),
-                        selected = "(all)",
+                        selected = "(all valid votes)",
                         multiple = FALSE),
             #selectInput("dist", "DISTRICT", choices = c(""), selected = ""),
         #),
