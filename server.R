@@ -695,11 +695,19 @@ shinyServer(
                      (is.na(xx$TOT2_N) | xx$TOT2_N >= input$minvotes),]
             xx <- xx[(is.na(xx$TOT1_N) | xx$TOT1_N >= input$minvotes2) &
                      (is.na(xx$TOT2_N) | xx$TOT2_N >= input$minvotes2),]
+            zap1 <<- xx #DEBUG-RM18
             row.names(xx) <- seq(1:NROW(xx)) #DEBUG-TEST NROW(xx) == 0
-            xxtmp <- xx[xx$DEM1 > 0 & xx$REP1 > 0 & xx$DEM2 > 0 & xx$REP2 > 0,]
+            if (input$units == "Percent ratio"){
+                xxtmp <- xx[xx$DEM1 > 0 & xx$REP1 > 0,]
+            }
+            else{
+                xxtmp <- xx[xx$DEM1 > 0 & xx$REP1 > 0 & xx$DEM2 > 0 & xx$REP2 > 0,]
+            }
+            xxtmp <- xxtmp[!is.na(xxtmp$DEM1) & !is.na(xxtmp$REP1),] # exclude primaries
             if (NROW(xxtmp) > 0){ # filter only if rows available
                 xx <- xxtmp
             }
+            zap2 <<- xx #DEBUG-RM18
             if (input$party == "Democrat"){
                 preparty <- "DEM"
                 party1 <- "DEM1"
@@ -1329,7 +1337,7 @@ shinyServer(
                 print("RACE required: Set STATE, YEAR, ELECTION, COUNTY, OFFICE and click 'ADD RACE'")
                 return(NULL)
             }
-            ee <- dd[dd$AREA != "TOTAL",] #remove TOTAL
+            ee <- dd[dd$COUNTY != "" & dd$AREA != "TOTAL",] #remove TOTAL
             if (NROW(ee) > 0) dd <- ee
             dd <- dd[is.na(dd$TOTAL) | dd$TOTAL >= input$minvotes,]
             row.names(dd) <- seq(1:NROW(dd))
@@ -2354,8 +2362,8 @@ shinyServer(
             xx$Party[is.na(xx$Party)] <- "UNK"
             xx$Party[xx$Party == "STATS"] <- "VOTE"
             if (input$xparty1 == "(all valid votes)"){
-                #xx <- xx[!(grepl("Overvote",xx$Name) | grepl("Undervote",xx$Name)),]
                 xx <- xx[!(toupper(xx$Name) %in% c("OVERVOTES","UNDERVOTES")),]
+                #xx <- xx[!(grepl("Overvote",xx$Name) | grepl("Undervote",xx$Name)),]
             }
             else if (input$xparty1 %in% c("OVERVOTES","UNDERVOTES")){
                 xx <- xx[!is.na(xx$Name) & toupper(xx$Name) == input$xparty1,]
@@ -2748,6 +2756,7 @@ shinyServer(
             # else{
             #     dd <- dd[dd$COUNTY != "" & !is.na(dd$COUNTY),]
             # }
+            zaa <<- dd #DEBUG-RM
             if (input$areamod != ""){
                 dogroup <- FALSE
                 for (i in 1:nchar(input$areamod)){
@@ -2768,6 +2777,14 @@ shinyServer(
                             #     gsub(".$","",dd$AREA[dd$COUNTY == "Miami-Dade"])
                             dd$AREA <- gsub("^[0]+","",dd$AREA)
                             dd$AREA <- gsub("\\.\\d","",dd$AREA)
+                            if (yr == 2020){
+                                dd$AREA[dd$COUNTY == "Baker"] <-
+                                    str_match(dd$AREA[dd$COUNTY == "Baker"]," (\\w+)$")[,2]
+                            }
+                            else if (yr == 2022){
+                                dd$AREA[dd$COUNTY == "Baker"] <-
+                                    str_match(dd$AREA[dd$COUNTY == "Baker"],"^(\\w+)\\:")[,2]
+                            }
                         }
                     }
                     else if (ch1 == "="){
