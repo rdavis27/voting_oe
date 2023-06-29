@@ -738,12 +738,19 @@ shinyServer(
                 vcolor <- rep_len(vcolor,(length(vlimit)+1))
                 vparty <- unlist(strsplit(input$xparty2, ","))
                 xx$Party <- vparty[length(vparty)]
-                xx$Party[xx[["MARGIN1"]] < vlimit[1]] <- vparty[1]
+                if (input$units == "Count"){
+                    pmargin <- 100 * xx[["MARGIN1"]] / xx[["TOTAL1"]]
+                }
+                else{
+                    pmargin <- xx[["MARGIN1"]]
+                }
+                #xx$Party[xx[["MARGIN1"]] < vlimit[1]] <- vparty[1]
+                xx$Party[pmargin < vlimit[1]] <- vparty[1]
                 xx$Color <- vcolor[length(vcolor)]
-                xx$Color[xx[["MARGIN1"]] < vlimit[1]] <- vcolor[1]
+                xx$Color[pmargin < vlimit[1]] <- vcolor[1]
                 for (i in 1:(length(vlimit)-1)){
-                    xx$Party[xx[["MARGIN1"]] >= vlimit[i] & xx[["MARGIN1"]] < vlimit[i+1]] <- vparty[i+1]
-                    xx$Color[xx[["MARGIN1"]] >= vlimit[i] & xx[["MARGIN1"]] < vlimit[i+1]] <- vcolor[i+1]
+                    xx$Party[pmargin >= vlimit[i] & pmargin < vlimit[i+1]] <- vparty[i+1]
+                    xx$Color[pmargin >= vlimit[i] & pmargin < vlimit[i+1]] <- vcolor[i+1]
                 }
             }
             isParty <- NULL
