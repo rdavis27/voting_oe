@@ -17,6 +17,7 @@
 <a href="#turnout1"><font color="red"><h4>Analyzing the Turnout of a Single Race</h4></font></a>
 <a href="#turnout2"><font color="red"><h4>Comparing the Turnout of Two Races</h4></font></a>
 <a href="#registered"><font color="red"><h4>Analyzing Voter Registration</h4></font></a>
+<a href="#counts"><font color="red"><h4>Analyzing Vote Counts</h4></font></a>
 </ul>
 <a href="#1election"><font color="red"><h3>Comparing Multiple Races from a Single Election</h3></font></a>
 <ul>
@@ -348,6 +349,42 @@ The following plot shows the same information for just Miami-Dade County, FL.
 As can be seen, the number of both registered Republicans and Democrats dropped from the 2020 election through August of 2021 in Miami-Dade County.  After that, the number of Republican registered voters began to rise while the number of Democrat registered voters continued to drop.  From August of 2021 through May of 2023, the number of registered Republicans in Miami-Dade has risen by 14,340 while the number of registered Democrats has fallen by 57,932.  That's a combined difference of over 72 thousand registered voters.  In May of 2023, there were 52,676 fewer registered Democrats in Miami-Dade County than there were in January of 2017.
 <p>
 Sources: <A HREF="https://www.dos.myflorida.com/elections/data-statistics/voter-registration-statistics/voter-registration-reports/">Voter Registration Reports</A>
+<p>
+<a name="counts"><font color="red"><h2>Analyzing Vote Counts</h2></font></a>
+<p>
+The change in voter registration leads one to investigate whether there was a similar change in vote counts.  The change in the vote margins from the 2018 to the 2022 Governor's races can be displayed via the following steps:
+<p>
+<ul>
+<li>Go to <A HREF="https://econdata.shinyapps.io/voting_oe/">https://econdata.shinyapps.io/voting_oe/</A>.
+<li>Set STATE, YEAR, and ELECTION to select the desired election (for this example, set to FL, 2018, and 20181106__fl__general).
+<li>Set OFFICE to select the desired race (for this example, set to Governor).
+<li>Click the ADD RACE button.
+<li>Set STATE, YEAR, and ELECTION to select the second election (for this example, set to FL, 2022, and 20221108__fl__general).
+<li>Click the ADD RACE button.
+<li>Set COUNTY to "(all)" (at bottom of list).
+<li>Click the "Area Plot2" tab.
+<li>Set "Label type" to County.
+<li>Add = to start of "AREA modify", making it "=#=TOTAL>MERGE" (without the quotes).
+</ul>
+This will display the following plot:
+<p>
+<img src="voe_aplot2_gov18gov18_all_county_screen.png" alt="">
+<p>
+The above plot shows the shift in the margin vote share from the 2018 to the 2022 Governor's race, by county.  The fact that all of the points are below the x-axis indicates that the vote margin share (percent) in all of the counties became more Republican.  The shift appeared to average about 15 percent for majority Republican (red) counties and upwards of 20 percent for majority Democrat (blue) counties.  Miami-Dade County shows to have shifted by over 30 percent.
+<p>
+Changing "Units" from Percent to Count and changing "Party" to Total will display the following plot:
+<p>
+<img src="voe_aplot2_gov18gov18_all_county_count_total.png" alt="">
+<p>
+The above plot shows that the total vote counts in most of the red majority Republican counties went up while the vote counts in all of the blue majority Democrat counties went down.  One can focus in on just the Democrat votes by changing "Party" to Democrat.  This will display the following plot:
+<p>
+<img src="voe_aplot2_gov18gov18_all_county_count_dem.png" alt="">
+<p>
+As can be seen, Democrat votes appear to have decreased from the 2018 to the 2022 Governor's race in every county except for Sumter.  The votes in Miami-Dade County decreased by over 150 thousand votes.  One can then focus in on just the Republican votes by changing "Party" to Republican.  This will display the following plot:
+<p>
+<img src="voe_aplot2_gov18gov18_all_county_count_rep.png" alt="">
+<p>
+As can be seen, Republican votes appear to have increased from the 2018 to the 2022 Governor's race in every county except for Alachua, Leon, and perhaps Escambia.  All of this seems consistent with the fact that the number of registered Republican went up from 2018 to 2022 but the number of registered Democrats went down (or stayed about even).  In the latter case, the vote count would also seem to have been affected by the fact that the voter turnout generally went down in majority Democrat counties, as shown earlier. 
 <p>
 <a name="1election"><font color="red"><h2>Comparing Multiple Races from a Single Election</h2></font></a>
 <p>
