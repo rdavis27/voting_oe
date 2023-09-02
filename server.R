@@ -15,6 +15,7 @@ library(rgeos)
 library(tigris)
 library(rvest)
 library(plotly)
+library(XML) # xmlParse and xmlToDataFrame
 
 areaWidth <- 900
 areaHeight <- 600
@@ -3300,6 +3301,7 @@ shinyServer(
         getElections <- function(){
             url <- paste0("https://github.com/openelections/openelections-data-",
                           tolower(input$state2),"/tree/master/",input$xyear)
+            #print(paste0("getElections: url=|",url,"|")) #DEBUG-RM
             if (input$countyfiles){
                 url2 <- paste0(url,"/counties")
                 if (valid_url(url2)){
@@ -3310,6 +3312,7 @@ shinyServer(
             htm <- NULL
             result = tryCatch({
                 htm <- url %>% read_html()
+                #zhtm <<- htm #DEBUG-RM
             }, warning = function(w) {
                 print(paste0("WARNING in getElections: ",w))
             }, error = function(e) {
@@ -3318,12 +3321,19 @@ shinyServer(
                 #cleanup-code
             })
             if (!is.null(htm)){
-                opens <- htm %>% html_elements(".js-navigation-open")
+                xxx <- xmlParse(htm)
+                ddd <- xmlToDataFrame(xxx)
+                ppp <- ddd %>% unnest_wider("p")
+                sss <- as.character(ppp$...1)
+                ppp$...1 <- substring(sss,2,nchar(sss)) # strip enclosing {}
+                jjj <- parse_json(sss)
+                opens <- jjj$payload$tree$items
                 filenames <- NULL
                 elections <- NULL
                 counties  <- NULL
-                for (i in 1:length(opens)){
-                    txt <- opens[i] %>% html_text()
+                for (i in opens){
+                    #print(paste0("i$contentType=",i$contentType)) #DEBUG-RM
+                    txt <- i$name
                     if (input$countyfiles){
                         pattern <- paste0("^(\\d+)__",tolower(input$state2),
                                           "__(\\w+)__(\\w+)__precinct.csv$")
