@@ -765,6 +765,14 @@ shinyServer(
                 xx$Votes <- xx[[party1n]]
             }
             if (input$xdxplot2){
+                if (input$rlimit2 != ""){
+                    srr <- unlist(strsplit(input$rlimit2, ","))
+                    if (length(srr) >= 2){
+                        nrr <- as.numeric(srr)
+                        xx <- xx[xx[[party_sh]] >= nrr[1] & xx[[party_sh]] <= nrr[2],]
+                    }
+                }
+                #xx <- xx[xx[[party_sh]] != Inf & xx[[party_sh]] != -Inf,]
                 gg <- ggplot(xx, aes_string(x=party1, y=party_sh))
             }
             else{
@@ -786,6 +794,14 @@ shinyServer(
             }
             if (input$party == "Margin" | input$units == "Count"){
                 gg <- gg + geom_vline(xintercept=0, color=input$ncolor2)
+            }
+            if (input$rcolor2 != ""){
+                if (input$rcolor2 == "default"){
+                    gg <- gg + geom_smooth(method = "lm", formula = y~x)
+                }
+                else{
+                    gg <- gg + geom_smooth(method = "lm", formula = y~x, color = input$rcolor2)
+                }
             }
             if (input$party == "Margin"){
                 if (NROW(xx) == 1 | input$forcex |

@@ -273,6 +273,8 @@ shinyUI(pageWithSidebar(
                          textInput("xcolor2","Color (points)",value = "red3,green3,blue3"),
                          textInput("lcolor2","Color (labels)",value = "red3,green3,blue3"),
                          textInput("ncolor2","Color (lines)",value = "black"),
+                         textInput("rcolor2","Color (regression)",value = ""),
+                         textInput("rlimit2","Limit (regression)",value = ""),
                          textInput("xparty2","Party",value = "1_Solid R,2_Toss-Up,3_Solid D"),
                          textInput("vrange","Vote Point Range",value = "1,4"),
                          textInput("vtrans","Vote Transform",value = "#log10"),
