@@ -229,11 +229,10 @@ shinyServer(
             else if (input$xdxplot2){
                 if (input$units == "Percent ratio"){
                     if (xtype >= 2){
-                        title <- paste(tloc,"Voter Turnout")
+                        title <- paste(tloc,"Vote Ratio")
                     }
                     else{
-                        title <- paste(tloc,"Voter Turnout by", input$party,
-                                       "Vote", tnote)
+                        title <- paste(tloc, racex, tunits, "as Percent of", racey, tunits, tnote)
                     }
                 }
                 else{
@@ -262,19 +261,31 @@ shinyServer(
                 #STOP areaPlot2b code
             }
             else{
-                if (input$xdxplot2){
+                if (input$units == "Percent ratio"){
                     if (xtype >= 2){
-                        ylabel <- paste(tshiftfor, racey)
+                        ylabel <- paste("% of", racey, tunits)
                     }
                     else{
-                        ylabel <- paste(tshiftin, input$party, tunits, "for", racey)
+                        ylabel <- paste("Pecent of", racey, tunits)
                     }
+                    xlabel <- paste0(input$party," ","Vote Share for ", racex,
+                                     "\nSources: see http://econdataus.com/voting_oe.htm")
                 }
                 else{
-                    ylabel <- paste(input$party, tunits, "for", racey)
+                    if (input$xdxplot2){
+                        if (xtype >= 2){
+                            ylabel <- paste(tshiftfor, racey)
+                        }
+                        else{
+                            ylabel <- paste(tshiftin, input$party, tunits, "for", racey)
+                        }
+                    }
+                    else{
+                        ylabel <- paste(input$party, tunits, "for", racey)
+                    }
+                    xlabel <- paste0(input$party," ",tunits," for ", racex,
+                                     "\nSources: see http://econdataus.com/voting_oe.htm")
                 }
-                xlabel <- paste0(input$party," ",tunits," for ", racex,
-                                 "\nSources: see http://econdataus.com/voting_oe.htm")
             }
             labels <- c(title, xlabel, ylabel)
             return(labels)
