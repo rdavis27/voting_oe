@@ -2519,6 +2519,12 @@ shinyServer(
             return(lst)
         }
         read_oe <- function(race){
+            if (input$state2 == "WI"){
+                zarea <- "ward"
+            }
+            else{
+                zarea <- "precinct"
+            }
             catmsg(paste0("START read_oe(",race,")")) #DEBUG
             # filename <- paste0(election,"__",tolower(county),"__precinct.csv")
             # filepath <- paste0("https://raw.githubusercontent.com/openelections/openelections-data-",input$state2,"/master/",
@@ -2529,8 +2535,14 @@ shinyServer(
             xcounty <- input$xcounty
             #if (length(xcounty) > 1 | (length(xcounty) == 1 & (xcounty[1] == "" | xcounty[1] == "(all)"))){
             if (!input$countyfiles | length(xcounty) > 1 | (length(xcounty) == 1 & (xcounty[1] == "" | xcounty[1] == "(all)"))){
-                filename <- paste0(rdat$election,"__precinct.csv")
-                filepath <- paste0(data_dir,input$xelection,"__precinct.csv")
+                if (input$state2 == "WI"){
+                    filename <- paste0(rdat$election,"__ward.csv")
+                    filepath <- paste0(data_dir,input$xelection,"__ward.csv")
+                }
+                else{
+                    filename <- paste0(rdat$election,"__precinct.csv")
+                    filepath <- paste0(data_dir,input$xelection,"__precinct.csv")
+                }
                 catmsg(paste0("filename=",filename)) #DEBUG
                 catmsg(paste0("filepath=",filepath)) #DEBUG
                 if (exists(filename, envir = .GlobalEnv)){
@@ -2540,7 +2552,7 @@ shinyServer(
                 else if (file.exists(filepath)){
                     catmsg(paste0("BEFORE read_csv(",filepath,")"))
                     cc <- read_csv(filepath, guess_max = 1000000) #DEBUG-TEST
-                    cc <- cc[c("county","precinct","office","district","party","candidate","votes")] #DEBUG_TEST
+                    cc <- cc[c("county",zarea,"office","district","party","candidate","votes")] #DEBUG_TEST
                     catmsg(paste0(" AFTER read_csv(",filepath,")"))
                     assign(filename, cc, envir = .GlobalEnv)
                 }
@@ -2566,7 +2578,12 @@ shinyServer(
                 }
             }
             else{
-                filename <- paste0(rdat$election,"__",tolower(xcounty),"__precinct.csv")
+                if (input$state2 == "WI"){
+                    filename <- paste0(rdat$election,"__",tolower(xcounty),"__ward.csv")
+                }
+                else{
+                    filename <- paste0(rdat$election,"__",tolower(xcounty),"__precinct.csv")
+                }
                 filepath <- paste0("https://raw.githubusercontent.com/openelections/openelections-data-",
                                    tolower(rdat$state),"/master/",rdat$year,"/counties/",filename)
                 catmsg(paste0("filename=",filename)) #DEBUG
@@ -2591,7 +2608,7 @@ shinyServer(
             catmsg(paste0("NROW=",NROW(cc)))
             xx <- cc[cc$office == rdat$office,] #DEBUG-CHECK
             catmsg(paste0("NROW=",NROW(xx)," with office == ",rdat$office))
-            columns <- c("county","precinct","office","district","total","party","candidate","votes")
+            columns <- c("county",zarea,"office","district","total","party","candidate","votes")
             #xx <- cleanTX_2020(xx)
             xx$total <- 0
             #office <- "Railroad Commissioner"
@@ -3322,7 +3339,12 @@ shinyServer(
                         yy <- rbind(yy, xx)
                     }
                 }
-                filename <- paste0(data_dir,input$xelection,"__precinct.csv")
+                if (input$state2 == "WI"){
+                    filename <- paste0(data_dir,input$xelection,"__ward.csv")
+                }
+                else{
+                    filename <- paste0(data_dir,input$xelection,"__precinct.csv")
+                }
                 write_csv(yy, filename)
             }
         }
@@ -3369,13 +3391,25 @@ shinyServer(
                 for (i in opens){
                     #print(paste0("i$contentType=",i$contentType)) #DEBUG-RM
                     txt <- i$name
-                    if (input$countyfiles){
-                        pattern <- paste0("^(\\d+)__",tolower(input$state2),
-                                          "__(\\w+)__(\\w+)__precinct.csv$")
+                    if (input$state2 == "WI"){
+                        if (input$countyfiles){
+                            pattern <- paste0("^(\\d+)__",tolower(input$state2),
+                                              "__(\\w+)__(\\w+)__ward.csv$")
+                        }
+                        else{
+                            pattern <- paste0("^(\\d+)__",tolower(input$state2),
+                                              "__(\\w+)__ward.csv$")
+                        }
                     }
                     else{
-                        pattern <- paste0("^(\\d+)__",tolower(input$state2),
-                                          "__(\\w+)__precinct.csv$")
+                        if (input$countyfiles){
+                            pattern <- paste0("^(\\d+)__",tolower(input$state2),
+                                              "__(\\w+)__(\\w+)__precinct.csv$")
+                        }
+                        else{
+                            pattern <- paste0("^(\\d+)__",tolower(input$state2),
+                                              "__(\\w+)__precinct.csv$")
+                        }
                     }
                     mm <- str_match(txt, pattern)
                     if(!is.na(mm[1,1])){
@@ -3426,7 +3460,7 @@ shinyServer(
                                            tolower(input$state2),"/raw/master/",input$xyear,"/",filename)
                         #xx <- read_csv(filepath)
                         xx <- read_csv(filepath, guess_max = 1000000)
-                        validate_counties(xx, input$xelection)
+                        validate_counties(xx, input$xelection, filename)
                         if (file.exists(data_path)){
                             catmsg(paste0("====> write_csv(",localpath,")"))
                             write_csv(xx, localpath)
@@ -3595,8 +3629,14 @@ shinyServer(
                 #cleanup-code
             })
         }
-        validate_counties <- function(xx, xelection){
-            reqcols <- c("county","precinct","office","district","party","candidate","votes")
+        validate_counties <- function(xx, xelection, filename){
+            if (input$state2 == "WI"){
+                zarea <- "ward"
+            }
+            else{
+                zarea <- "precinct"
+            }
+            reqcols <- c("county",zarea,"office","district","party","candidate","votes")
             for (col in reqcols){
                 if (!(col %in% names(xx))){
                     catmsg(paste0("########## ",filename," missing column ",col))
@@ -3605,7 +3645,7 @@ shinyServer(
             ucounties <- unique(xx$county)
             for (cc in ucounties){
                 yy <- xx[xx$county == cc,]
-                nna <- sum(is.na(yy$precinct))
+                nna <- sum(is.na(yy[[zarea]]))
                 if (nna > 0){
                     catmsg(paste0("########## ",nna," of ",NROW(yy)," precints are NA in ",xelection,", county ",cc))
                 }
