@@ -22,6 +22,7 @@ areaHeight <- 600
 input_dir <- "input/"
 data_dir  <- "data/"
 #cfiles <- NULL
+print('<--- 1)read_csv("rdata_init.csv")')
 rdata <- read_csv("rdata_init.csv") # should match race values initialized in ui.R
 catlog <- "catlog.txt"
 #file.remove(catlog)
@@ -50,6 +51,19 @@ shinyServer(
             line <- paste0(msg,"\n")
             cat(file = ff, append = TRUE, line)
             cat(file = stderr(), line)
+        }
+        fixdata <- function(xx){
+            if (colnames(xx)[1] == "town" & colnames(xx)[2] == "ward"){
+                #xx$town <- paste0(xx$town,"_",xx$ward)
+                xx$town[!is.na(xx$ward)] <- paste0(xx$town[!is.na(xx$ward)],"_",xx$ward[!is.na(xx$ward)])
+                colnames(xx)[1] <- "county"
+                #xx <- subset(xx, select=-c(ward))
+                xx <- xx[,-2]
+                catmsg(paste0("##### FIX STATE ",input$state2))
+            }
+            xx$party[xx$party == "Democratic"] <- "DEM"
+            xx$party[xx$party == "Republican"] <- "REP"
+            return(xx)
         }
         states <- c("Alabama","Alaska","Arizona","Arkansas","California",
                     "Colorado","Connecticut","Delaware","District of Columbia","Florida",
@@ -2550,8 +2564,9 @@ shinyServer(
                     cc <- get(filename, envir = .GlobalEnv)
                 }
                 else if (file.exists(filepath)){
-                    catmsg(paste0("BEFORE read_csv(",filepath,")"))
+                    catmsg(paste0("<--- 2)read_csv(",filepath,")"))
                     cc <- read_csv(filepath, guess_max = 1000000) #DEBUG-TEST
+                    cc <- fixdata(cc)
                     cc <- cc[c("county",zarea,"office","district","party","candidate","votes")] #DEBUG_TEST
                     catmsg(paste0(" AFTER read_csv(",filepath,")"))
                     assign(filename, cc, envir = .GlobalEnv)
@@ -2594,7 +2609,9 @@ shinyServer(
                 else{
                     cc <- NULL
                     result = tryCatch({
+                        catmsg(paste0("<--- 3)read_csv(",filepath,")")) #DEBUG
                         cc <- read_csv(filepath)
+                        cc <- fixdata(cc)
                         assign(filename, cc, envir = .GlobalEnv)
                     }, warning = function(w) {
                         print(paste0("WARNING in read_oe: ",w))
@@ -3165,6 +3182,7 @@ shinyServer(
                         "mapyear","mapvar","mapcolors")
             filename <- paste0(data_dir,input$state2,"_",eventid,"_Parms.csv")
             if (file.exists(filename)){
+                catmsg(paste0("<--- 4)read_csv(",filename,")")) #DEBUG
                 parms <- read_csv(filename)
                 newversion <- max(parms$version) + 1
             }
@@ -3197,6 +3215,7 @@ shinyServer(
                         "vlimit", "vshape", "vdesc")
             filename <- paste0(data_dir,input$state2,"_",eventid,"_Parms.csv")
             if (file.exists(filename)){
+                catmsg(paste0("<--- 5)read_csv(",filename,")")) #DEBUG
                 parms <- read_csv(filename)
                 loadversion <- input[[loadid]]
                 pp <- parms[parms$version == loadversion,]
@@ -3226,6 +3245,7 @@ shinyServer(
                         "vlimit", "vshape", "vdesc")
             filename <- paste0(data_dir,input$state2,"_",eventid,"_Parms.csv")
             if (file.exists(filename)){
+                catmsg(paste0("<--- 6)read_csv(",filename,")")) #DEBUG
                 parms <- read_csv(filename)
                 newversion <- max(parms$version) + 1
             }
@@ -3258,6 +3278,7 @@ shinyServer(
                         "numeric","select","mapcolors")
             filename <- paste0(data_dir,input$state2,"_",eventid,"_Parms.csv")
             if (file.exists(filename)){
+                catmsg(paste0("<--- 7)read_csv(",filename,")")) #DEBUG
                 parms <- read_csv(filename)
                 loadversion <- input[[loadid]]
                 pp <- parms[parms$version == loadversion,]
@@ -3311,7 +3332,9 @@ shinyServer(
                     print(paste0("BEFORE read_csv(",ename,")")) #DEBUG-RM
                     filepath <- paste0("https://raw.githubusercontent.com/openelections/openelections-data-",
                                        tolower(input$state2),"/master/",input$xyear,"/counties/",ename)
+                    catmsg(paste0("<--- 8)read_csv(",filepath,")")) #DEBUG
                     xx0 <- read_csv(filepath)
+                    xx0 <- fixdata(xx0)
                     cols0 <- names(xx0)
                     xx <- xx0[,reqcols]
                     for (col in optcols){
@@ -3449,7 +3472,9 @@ shinyServer(
                     data_path <- "data"
                     localpath <- paste0(data_path,"/",filename)
                     if (file.exists(localpath)){
+                        catmsg(paste0("<--- 9)read_csv(",localpath,")")) #DEBUG
                         xx <- read_csv(localpath)
+                        xx <- fixdata(xx)
                     }
                     else{
                         # filepath <- paste0("https://raw.githubusercontent.com/openelections/openelections-data-",
@@ -3459,7 +3484,9 @@ shinyServer(
                         filepath <- paste0("https://github.com/openelections/openelections-data-",
                                            tolower(input$state2),"/raw/master/",input$xyear,"/",filename)
                         #xx <- read_csv(filepath)
+                        catmsg(paste0("<--- 10)read_csv(",filepath,")")) #DEBUG
                         xx <- read_csv(filepath, guess_max = 1000000)
+                        xx <- fixdata(xx)
                         validate_counties(xx, input$xelection, filename)
                         if (file.exists(data_path)){
                             catmsg(paste0("====> write_csv(",localpath,")"))
@@ -3509,11 +3536,12 @@ shinyServer(
                     }
                     result = tryCatch({
                         #xx <- read_csv(filepath, col_types = cols(.default = "c"))
+                        catmsg(paste0("<--- 11)read_csv(",filepath,")")) #DEBUG
                         xx <- read_csv(filepath, guess_max = 1000000)
+                        xx <- fixdata(xx)
                         assign(filename, xx, envir = .GlobalEnv)
                     }, warning = function(w) {
                         print(paste0("WARNING in observeEvent(xcounty): ",w))
-                        print(paste0("read_csv(",filepath,")"))
                     }, error = function(e) {
                         print(paste0("ERROR in observeEvent(xcounty): ",e))
                     }, finally = {
@@ -3603,7 +3631,9 @@ shinyServer(
                                tolower(state2),"/master/",input$xyear,"/",filename)
             catfile(ff,paste0("########## START check_state(",state2,"), filename=",filename))
             result = tryCatch({
+                catmsg(paste0("<--- 12)read_csv(",filepath,")")) #DEBUG
                 xx <- read_csv(filepath)
+                xx <- fixdata(xx)
                 if (toupper(state2) == "WI"){
                     names(xx)[names(xx) == "ward"] <- "precint"
                 }
