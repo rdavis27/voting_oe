@@ -1,0 +1,61 @@
+county,precinct,office,district,party,candidate,votes
+Apache,ALL,President of the US,,DEM,Harris,16650
+Apache,ALL,President of the US,,LBT,Chase,175
+Apache,ALL,President of the US,,GRN,Stein,149
+Apache,ALL,President of the US,,REP,Trump,11565
+Cochise,ALL,President of the US,,DEM,Harris,11341
+Cochise,ALL,President of the US,,LBT,Chase,189
+Cochise,ALL,President of the US,,GRN,Stein,149
+Cochise,ALL,President of the US,,REP,Trump,21198
+Coconino,ALL,President of the US,,DEM,Harris,41077
+Coconino,ALL,President of the US,,LBT,Chase,499
+Coconino,ALL,President of the US,,GRN,Stein,476
+Coconino,ALL,President of the US,,REP,Trump,27220
+Gila,ALL,President of the US,,DEM,Harris,8358
+Gila,ALL,President of the US,,LBT,Chase,134
+Gila,ALL,President of the US,,GRN,Stein,101
+Gila,ALL,President of the US,,REP,Trump,18601
+Graham,ALL,President of the US,,DEM,Harris,3867
+Graham,ALL,President of the US,,LBT,Chase,87
+Graham,ALL,President of the US,,GRN,Stein,52
+Graham,ALL,President of the US,,REP,Trump,11177
+Greenlee,ALL,President of the US,,DEM,Harris,954
+Greenlee,ALL,President of the US,,LBT,Chase,27
+Greenlee,ALL,President of the US,,GRN,Stein,19
+Greenlee,ALL,President of the US,,REP,Trump,2307
+La Paz,ALL,President of the US,,DEM,Harris,1935
+La Paz,ALL,President of the US,,LBT,Chase,24
+La Paz,ALL,President of the US,,GRN,Stein,23
+La Paz,ALL,President of the US,,REP,Trump,5106
+Maricopa,ALL,President of the US,,DEM,Harris,938151
+Maricopa,ALL,President of the US,,LBT,Chase,10167
+Maricopa,ALL,President of the US,,GRN,Stein,10896
+Maricopa,ALL,President of the US,,REP,Trump,1012518
+Mohave,ALL,President of the US,,DEM,Harris,23646
+Mohave,ALL,President of the US,,LBT,Chase,394
+Mohave,ALL,President of the US,,GRN,Stein,277
+Mohave,ALL,President of the US,,REP,Trump,83556
+Navajo,ALL,President of the US,,DEM,Harris,20411
+Navajo,ALL,President of the US,,LBT,Chase,274
+Navajo,ALL,President of the US,,GRN,Stein,191
+Navajo,ALL,President of the US,,REP,Trump,29168
+Pima,ALL,President of the US,,DEM,Harris,254821
+Pima,ALL,President of the US,,LBT,Chase,2268
+Pima,ALL,President of the US,,GRN,Stein,2475
+Pima,ALL,President of the US,,REP,Trump,181023
+Pinal,ALL,President of the US,,DEM,Harris,80046
+Pinal,ALL,President of the US,,LBT,Chase,1077
+Pinal,ALL,President of the US,,GRN,Stein,880
+Pinal,ALL,President of the US,,REP,Trump,125898
+Santa Cruz,ALL,President of the US,,DEM,Harris,10899
+Santa Cruz,ALL,President of the US,,LBT,Chase,77
+Santa Cruz,ALL,President of the US,,GRN,Stein,73
+Santa Cruz,ALL,President of the US,,REP,Trump,7429
+Yavapai,ALL,President of the US,,DEM,Harris,41532
+Yavapai,ALL,President of the US,,LBT,Chase,573
+Yavapai,ALL,President of the US,,GRN,Stein,389
+Yavapai,ALL,President of the US,,REP,Trump,85732
+Yuma,ALL,President of the US,,DEM,Harris,14536
+Yuma,ALL,President of the US,,LBT,Chase,158
+Yuma,ALL,President of the US,,GRN,Stein,127
+Yuma,ALL,President of the US,,REP,Trump,25738
