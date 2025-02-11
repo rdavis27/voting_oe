@@ -325,7 +325,7 @@ shinyServer(
             return(labels)
         }
         output$myUsage <- renderUI({
-            includeHTML("http://econdataus.com/voting_oe.htm")
+            includeHTML("http://econdataus.com/voting_oe24.htm")
         })
         output$areaPlot <- renderPlotly({
             areaWidth <<- input$areaWidth
