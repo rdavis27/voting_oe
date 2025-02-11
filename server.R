@@ -66,8 +66,10 @@ shinyServer(
                 xx <- xx[,-2]
                 catmsg(paste0("##### FIX STATE ",input$state2))
             }
-            xx$party[xx$party == "Democratic"] <- "DEM"
-            xx$party[xx$party == "Republican"] <- "REP"
+            if ("party" %in% names(xx)){
+                xx$party[xx$party == "Democratic"] <- "DEM"
+                xx$party[xx$party == "Republican"] <- "REP"
+            }
             return(xx)
         }
         states <- c("Alabama","Alaska","Arizona","Arkansas","California",
@@ -1715,6 +1717,7 @@ shinyServer(
             return(xx)
         })
         getIndicators <- function(pp, ccin, varfrom, varto, ind){
+            pp <- pp[pp$TOTAL >= input$minprevotes2,] #DEBUG_FIX_241008
             pvarto <- paste0("p",varto)
             pp$p1 <- 0
             pp$p1[as.numeric(pp[[varfrom]]) >= 1] <- 1
@@ -1855,6 +1858,7 @@ shinyServer(
         output$myIndicator <- renderPrint({
             dp <- input$decimals2
             pp <- getdata()
+            zpp <<- pp #DEBUG_TMP
             if (input$bigsmall2 > 0){
                 pp$COUNTY <- "Big"
                 pp$COUNTY[pp$TOTAL < input$bigsmall2] <- "Small"
@@ -1925,6 +1929,38 @@ shinyServer(
             gg <- gg + geom_point(aes_string(color="COUNTY", shape="COUNTY"), size=3)
             gg <- gg + geom_line(aes(color=COUNTY))
             gg <- gg + ggtitle(title) + ylab(ylabel)
+            return(gg)
+        })
+        output$myIndVbar <- renderPlot({
+            pp <- getdata()
+            namedem <- names(pp)[4]
+            namerep <- names(pp)[5]
+            names(pp)[4] <- "DEM"
+            names(pp)[5] <- "REP"
+            cc <- NULL
+            for (iv in input$indvar2){
+                cc <- getIndicators(pp, cc, iv, iv, input$indicator2)
+            }
+            cc <- cc[cc$p1 >= input$minprecints2,]
+            cc <- cc[cc$NOUT > 0,]
+            ylabel <- "COUNT"
+            if (input$showpcts2){
+                ylabel <- "PERCENT"
+            }
+            title <- paste0(input$xcounty," County, ",input$state2,": ",
+                            str_to_title(ylabel),"s of ",input$indicator2," Digits"," in ",
+                            input$xoffice[1]," ",str_to_title(input$indvar2)," Votes")
+            if (input$titledetail2){
+                title <- paste0(title," (>= ",input$minprecints2," Areas with >= ",
+                        input$minprevotes2," Votes)")
+            }
+            ee <- cc %>%
+                gather("DIGIT", "COUNT", c("n0","n1","n2","n3","n4","n5","n6","n7","n8","n9"))
+            ee$DIGIT <- gsub("^n","",ee$DIGIT)
+            gg <- ggplot(ee, aes(x = DIGIT, y = COUNT))
+            gg <- gg + geom_bar(stat = "identity", fill = "red")
+            gg <- gg + ggtitle(title) + ylab(ylabel)
+            gg <- gg + theme_grey(base_size = input$textsize2)
             return(gg)
         })
         output$myIndLeaflet <- renderLeaflet({
@@ -2541,6 +2577,7 @@ shinyServer(
             xx <- xx[,c("DIST","COUNTY","AREA","Name","Votes")]
             # check for matches first???
             xx$Votes[is.na(xx$Votes)] <- 0 # change NAs to 0 before group_by
+            xx$Votes <- gsub(",","",xx$Votes) #DEBUG_FIX 250208
             xx <- xx %>%
                 group_by(DIST,COUNTY,AREA,Name) %>%
                 summarize(Votes=sum(as.integer(Votes)))
@@ -2999,6 +3036,9 @@ shinyServer(
                     cat("ERROR: Select second race\n")
                     return(NULL)
                 }
+            }
+            if (!is.data.frame(yy)){ # DEBUG_FIX 250209 - temporarily patch missing yy
+                yy <- xx
             }
             namesxx <- names(xx)
             namesyy <- names(yy)
