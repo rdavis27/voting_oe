@@ -23,9 +23,9 @@ input_dir <- "input/"
 data_dir  <- "data/"
 # filenames <- "20220823__fl__primary__precinct.csv"
 # elections <- "20220823__fl__primary"
-filenames <- "20221108__fl__general__precinct.csv"
-elections <- "20221108__fl__general"
-counties  <- "Miami-Dade"
+filenames <- "20241105__mi__general__general__precinct.csv"
+elections <- "20241105__mi__general"
+counties  <- "Wayne"
 cfiles <- data.frame(filenames, elections, counties) # was NULL
 print('<--- 1)read_csv("rdata_init.csv")')
 rdata <- read_csv("rdata_init.csv") # should match race values initialized in ui.R
@@ -160,16 +160,17 @@ shinyServer(
             return(gg)
         }
         orderdf <- function(dd, sortcol, sortdesc){
+            #DEBUG_FIX 250210 - fix by column name
             if (sortcol != 0){
                 if (!sortdesc){
-                    dd <- dd[order(dd[,sortcol]),] #DEBUG-FIX2408
+                    dd <- dd[order(dd[[sortcol]]),] #DEBUG_FIX 250210
                 }
                 else{
-                    if (class(dd[sortcol]) == "numeric"){
-                        dd <- dd[order(-dd[sortcol]),]
+                    if (class(dd[[sortcol]]) == "numeric"){ #DEBUG_FIX 250210
+                        dd <- dd[order(-dd[[sortcol]]),] #DEBUG_FIX 250210
                     }
                     else{
-                        dd <- dd[order(dd[sortcol]),]
+                        dd <- dd[order(dd[[sortcol]]),] #DEBUG_FIX 250210
                         dd <- dd %>% arrange(desc(row_number()))
                     }
                 }
