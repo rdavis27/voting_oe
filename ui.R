@@ -420,6 +420,8 @@ shinyUI(pageWithSidebar(
                          textInput("mapcolors2", "Map Colors", value = "RdBu"),
                          numericInput("bigsmall2","Big/Small",0,min = 0),
                          numericInput("decimals2","Decimals",1,min = 0),
+                         numericInput("textsize2","Text Size",12,min = 0),
+                         checkboxInput("titledetail2","Title Detail",value = TRUE),
                          checkboxInput("inclcounty2","Use County",value = FALSE),
                          checkboxInput("showpcts2","Show Percents",value = FALSE),
                          checkboxInput("showcounts2","Show Counts",value = FALSE)
@@ -437,6 +439,12 @@ shinyUI(pageWithSidebar(
                                     width = 10,
                                     plotOutput("myIndPlot", width = "800px", height = "500px")
                                 )
+                            ),
+                            tabPanel("Histogram",
+                                     mainPanel(
+                                         width = 10,
+                                         plotOutput("myIndVbar", width = "800px", height = "500px")
+                                     )
                             ),
                             tabPanel("Leaflet",
                                 mainPanel(
