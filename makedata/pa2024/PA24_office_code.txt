@@ -1,0 +1,13 @@
+N	Office_Code	Office
+1	USP	President Of The United States
+2	USS	United States Senator
+3	USC	Representative In Congress 
+4	STS	Senator In The General Assembly 
+5	STH	Representative In The General Assembly 
+6	ATT	Attorney General 
+7	AUD	Auditor General 
+8	TRE	State Treasurer 
+9	DED	Delegate To Democratic National Convention 
+10	DER	Delegate To Republican National Convention 
+11	ADD	Alt Delegate To Democratic National Convention
+12	ADR	Alt Delegate To Republican National Convention
