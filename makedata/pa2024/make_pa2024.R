@@ -9,12 +9,12 @@ makepath_pre <- paste0(makepath,"PA24_") #add file prefix
 filename <- "20241105__pa__GE__precinct.csv"
 #END PARAMETERS
 
-#Download 2024 PA Bulk Election Data
+#Download 2024 PA Bulk Election Data #UPDATE
 destpath <- paste0(makepath,basename(url))
-download.file(url, destfile = destpath)
-#Read 2024 PA Bulk Election Data
+download.file(url, destfile = destpath, mode = "wb")
+#Read 2024 PA Bulk Election Data #UPDATE
 dd <- read_csv(destpath, col_names = FALSE)
-#Read 2024 PA Field, County Code, and Office Code definitions. These were created from file at
+#Read 2024 PA Field, County Code, and Office Code definitions. These were created from file at #UPDATE THIS AND NEXT 2 LINES
 # https://www.pa.gov/content/dam/copapwp-pagov/en/dos/resources/voting-and-elections/bulk-data/erstat_2024_g_readme.txt
 # which is accessible at https://www.pa.gov/agencies/dos/resources/voting-and-elections-resources/voting-and-election-statistics/bulk-election-data.html#accordion-b33bb36a11-item-d105bc02cf
 hh <- as.data.frame(read_table(paste0(makepath_pre,"fields.txt")))
