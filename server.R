@@ -16,14 +16,13 @@ library(tigris)
 library(rvest)
 library(plotly)
 library(XML) # xmlParse and xmlToDataFrame
+library(httr)
 
 areaWidth <- 900
 areaHeight <- 600
 input_dir <- "input/"
 data_dir  <- "data/"
-# filenames <- "20220823__fl__primary__precinct.csv"
-# elections <- "20220823__fl__primary"
-filenames <- "20241105__mi__general__general__precinct.csv"
+filenames <- "20241105__mi__general__precinct.csv"
 elections <- "20241105__mi__general"
 counties  <- "Wayne"
 cfiles <- data.frame(filenames, elections, counties) # was NULL
@@ -69,6 +68,10 @@ shinyServer(
             if ("party" %in% names(xx)){
                 xx$party[xx$party == "Democratic"] <- "DEM"
                 xx$party[xx$party == "Republican"] <- "REP"
+            }
+            if ("county" %in% names(xx)){ #DEBUG 250816
+                xx <- xx[xx$county != "county",] #250812 - FIX extra county header in OE Eastland County, TX
+                xx$county <- str_to_title(xx$county)
             }
             return(xx)
         }
@@ -325,7 +328,8 @@ shinyServer(
             return(labels)
         }
         output$myUsage <- renderUI({
-            includeHTML("http://econdataus.com/voting_oe24.htm")
+            #includeHTML("http://econdataus.com/voting_oe24.htm")
+            includeHTML("voting_oe24.htm")
         })
         output$areaPlot <- renderPlotly({
             areaWidth <<- input$areaWidth
@@ -460,11 +464,6 @@ shinyServer(
                 gg <- gg + xlab(xlabel) + ylab(ylabel)
             }
             gg <- gg + geom_point(aes_string(color="COUNTY"), size=as.numeric(input$xsize1), alpha=as.numeric(input$xalpha1))
-            # gg <- gg + ggtitle(title)
-            # gg <- gg + xlab(xlabel) + ylab(ylabel)
-            # gg <- gg + annotate("text", x = xx$TOTAL, y =xx$Margin, label = xx$LABEL,
-            #                     color="red", hjust = 0, vjust = xx$VJUST)
-            # code modified from doAreaPlot2
             xx$POS   <- 0
             if (input$showall1){
                 xx$POS <- 2 # default to right
@@ -842,9 +841,9 @@ shinyServer(
                     gg <- gg + geom_abline(intercept=0, slope=1, color=input$ncolor2, linetype="dashed")
                 }
             }
-            if (input$party == "Margin" | input$units == "Count"){
+            #if (input$party == "Margin" | input$units == "Count"){
                 gg <- gg + geom_vline(xintercept=0, color=input$ncolor2)
-            }
+            #}
             if (input$rcolor2 != ""){
                 rcolor2 <- input$rcolor2
                 if (input$rlimit2 != ""){
@@ -869,13 +868,13 @@ shinyServer(
                     gg <- gg + geom_smooth(data = xxr, method = "lm", formula = y~x, color = rcolor2)
                 }
             }
-            if (input$party == "Margin"){
+            #if (input$party == "Margin"){
                 if (NROW(xx) == 1 | input$forcex |
                     (min(xx$MAR_SH, na.rm = TRUE) <= 0 &
                      max(xx$MAR_SH, na.rm = TRUE) >= 0)){
                     gg <- gg + geom_hline(yintercept=0, color=input$ncolor2)
                 }
-            }
+            #}
             vcolor <- unlist(strsplit(input$xcolor2, ","))
             vcolor <- vcolor[isParty]
             if (length(vcolor) > 0){
@@ -1029,6 +1028,7 @@ shinyServer(
         }
         output$areaPlot2 <- renderPlot({
             xx <- getdata12()
+            zxx12 <<- xx #DEBUG_TMP
             doAreaPlot2(xx, input$xcounty, 1)
         }, height = 600, width = 1000)
         output$areaPlot2s <- renderImage({
@@ -1074,6 +1074,7 @@ shinyServer(
         }, deleteFile = TRUE)
         output$areaPlot2b <- renderPlot({
             xx <- getdata12()
+            xx$COUNTY <- str_to_title(xx$COUNTY) #DEBUG 250812 - fix xx$COUNTY all caps
             # Move filtering to after getdata12()
             if (input$xcounty != "" & input$xcounty != "(all)"){
                 xx <- xx[xx$COUNTY == input$xcounty,]
@@ -1149,20 +1150,22 @@ shinyServer(
             # gg <- gg + geom_point(data=xx, size=3, alpha=as.numeric(input$xalpha2b),
             #                       aes_string(color="Party",shape="Votes"))
             xx <- xx[order(xx[[party1]]),]
-            if (substr(input$xoffice[1], 9, 12) == "Pres"){
-                xx$Race <- substr(input$xoffice[1], 4, 12)
-            }
-            else{
-                xx$Race <- substr(input$xoffice[1], 4, 11)
-            }
+            # if (substr(input$xoffice[1], 9, 12) == "Pres"){ #DEBUG_FIX 250812 ???
+            #     xx$Race <- substr(input$xoffice[1], 4, 12)
+            # }
+            # else{
+            #     xx$Race <- substr(input$xoffice[1], 4, 11)
+            # }
             xx[[party_sh]] <- seq(1,NROW(xx))
+            xx$Race   <- paste0(substring(input$xraces[1],4,5)," ",substring(input$xraces[1],11)) #DEBUG_FIX 250812
             xx2 <- xx
-            if (substr(input$xoffice[2], 9, 12) == "Pres"){
-                xx2$Race <- substr(input$xoffice[2], 4, 12)
-            }
-            else{
-                xx2$Race <- substr(input$xoffice[2], 4, 11)
-            }
+            xx2$Race  <- paste0(substring(input$xraces[2],4,5)," ",substring(input$xraces[2],11)) #DEBUG_FIX 250812
+            # if (substr(input$xoffice[2], 9, 12) == "Pres"){ #DEBUG_FIX 250812 - [2] doesn't exist ???
+            #     xx2$Race <- substr(input$xoffice[2], 4, 12)
+            # }
+            # else{
+            #     xx2$Race <- substr(input$xoffice[2], 4, 11)
+            # }
             xx2[[party1]] <- xx2[[party2]]
             xx$Votes <- xx[[party1n]]
             xx2$Votes <- xx2[[party2n]]
@@ -1592,23 +1595,10 @@ shinyServer(
             gg <- ggplot(ee, aes(x = RACE, y = COUNTY, fill = VALUE))
             gg <- gg + geom_tile()
             gg <- gg + scale_fill_gradient(low="red", high="green")
-            #gg <- ggplot(ee, aes(x = COUNTY, y = VALUE, fill = RACE))
-            #gg <- gg + geom_line()
-            #gg <- gg + scale_fill_gradient(low="red", high="green")
-            #gg <- ggplot(ee, aes(x = COUNTY, y = VALUE))
-            ###gg <- ggplot(ee, aes(y = COUNTY, x = VALUE))
-            #gg <- gg + geom_point(aes_string(color="Candidate",shape="Candidate"), size=3, alpha=as.numeric(input$xalpha1))
-            #gg <- gg + geom_line(aes_string(color="RACE"), size=2, alpha=as.numeric(input$xalpha1))
-            ###gg <- gg + geom_point(aes_string(color="RACE", shape="RACE"), size=2)
-            #   gg <- gg + geom_line(aes_string(color="RACE"), size=2)
-            #gg <- gg + geom_line()
             vlimits <- as.numeric(unlist(strsplit(input$hm_limits,",")))
             minlimit <- vlimits[1]
             maxlimit <- vlimits[2]
             if (minlimit >= maxlimit){
-                # abslimit <- max(abs(min(ee$VALUE)),abs(max(ee$VALUE)))
-                # minlimit <- -abslimit
-                # maxlimit <- abslimit
                 minlimit <- min(ee$VALUE)
                 maxlimit <- max(ee$VALUE)
             }
@@ -2984,9 +2974,11 @@ shinyServer(
                     }
                 }
                 if (dogroup){
-                    dd <- dd %>%
-                        group_by(COUNTY,AREA) %>%
-                        summarize(across(where(is.numeric), sum))
+                    if (class(dd$COUNTY) == "character" & class(dd$AREA) == "character"){ #DEBUG 250812
+                        dd <- dd %>%
+                            group_by(COUNTY,AREA) %>%
+                            summarize(across(where(is.numeric), sum))
+                    }
                     dd <- as.data.frame(dd)
                 }
             }
@@ -3038,8 +3030,13 @@ shinyServer(
                     return(NULL)
                 }
             }
-            if (!is.data.frame(yy)){ # DEBUG_FIX 250209 - temporarily patch missing yy
+            if (!is.data.frame(xx) | length(xx) < 5){ # DEBUG_FIX 250812 - temporarily patch missing xx
+                xx <- yy
+                xx[3:5] <- 0
+            }
+            if (!is.data.frame(yy) | length(yy) < 5){ # DEBUG_FIX 250209 - temporarily patch missing yy
                 yy <- xx
+                yy[3:5] <- 0
             }
             namesxx <- names(xx)
             namesyy <- names(yy)
@@ -3160,7 +3157,8 @@ shinyServer(
                 cat("ERROR: Select one or more races\n")
                 return(NULL)
             }
-            if (input$xparty1 == "(all)"){
+            #if (input$xparty1 == "(all)"){
+            if (input$xparty1 %in% c("(all)","(all valid votes)")){
                 if (nraces < 2){
                     cat("ERROR: Select two or more races\n")
                     return(NULL)
@@ -3286,14 +3284,14 @@ shinyServer(
             }
             if (xsortcolN != 0){
                 if (input$xsortdescN){
-                    dd <- dd[order(dd[xsortcolN]),]
+                    dd <- dd[order(dd[[xsortcolN]]),] #DEBUG_FIX_250213
                 }
                 else{
                     if (class(dd[xsortcolN]) == "numeric"){
-                        dd <- dd[order(-dd[xsortcolN]),]
+                        dd <- dd[order(-dd[[xsortcolN]]),] #DEBUG_FIX_250213
                     }
                     else{
-                        dd <- dd[order(dd[xsortcolN]),]
+                        dd <- dd[order(dd[[xsortcolN]]),] #DEBUG_FIX_250213
                         dd <- dd %>% arrange(desc(row_number()))
                     }
                 }
@@ -3427,25 +3425,6 @@ shinyServer(
                 }
             }
         })
-        # observeEvent(input$state2,{
-        #     url <- paste0("https://github.com/openelections/openelections-data-",
-        #                   tolower(input$state2))
-        #     #url = url(url, "rb")
-        #     html <- url %>% read_html()
-        #     opens <- html %>% html_elements(".js-navigation-open")
-        #     choices <- NULL
-        #     for (i in 1:length(opens)){
-        #         txt <- opens[i] %>% html_text()
-        #         if (grepl("^\\d+$",txt)){
-        #             choices <- c(choices, txt)
-        #         }
-        #     }
-        #     # Sys.sleep(10)
-        #     # closeAllConnections()
-        #     # gc()
-        #     updateSelectInput(session,"xyear",choices = choices,selected = choices[1])
-        #     #close(url)
-        # })
         getElectionfile <- function(){
             efiles <- unique(cfiles[as.character(cfiles$elections) == input$xelection,])
             if (input$createfiles){
@@ -3505,130 +3484,122 @@ shinyServer(
             ifelse(is.null(check),TRUE,FALSE)
         }
         getElections <- function(){
-            url <- paste0("https://github.com/openelections/openelections-data-",
-                          tolower(input$state2),"/tree/master/",input$xyear)
-            #print(paste0("getElections: url=|",url,"|")) #DEBUG-RM
-            if (input$countyfiles){
-                url2 <- paste0(url,"/counties")
-                if (valid_url(url2)){
-                    url <- url2
-                }
+            if (input$state2 == "WI"){
+                sarea <- "ward"
             }
-            #closeAllConnections()
-            htm <- NULL
-            result = tryCatch({
-                print(paste0("BEFORE read_html(",url,")")) #DEBUG-TEMP
-                htm <- url %>% read_html()
-                zhtm <<- htm #DEBUG-RM
-                print(paste0(" AFTER read_html(",url,")")) #DEBUG-TEMP
-            }, warning = function(w) {
-                print(paste0("WARNING in getElections: ",w))
-            }, error = function(e) {
-                print(paste0("ERROR in getElections: ",e))
-            }, finally = {
-                #cleanup-code
-            })
-            if (!is.null(htm)){
-                # xxx <- xmlParse(htm)
-                # ddd <- xmlToDataFrame(xxx)
-                # ppp <- ddd %>% unnest_wider("p")
-                # sss <- as.character(ppp$...1)
-                # ppp$...1 <- substring(sss,2,nchar(sss)) # strip enclosing {}
-                # jjj <- parse_json(sss)
-                # opens <- jjj$payload$tree$items
-                #opens <- htm %>% html_elements(".js-navigation-open") #DEBUG-REVERT
-                opens <- htm %>% html_elements(".react-directory-filename-column") #DEBUG-240623
-                zopens <<- opens #DEBUG_RM
-                filenames <- NULL
-                elections <- NULL
-                counties  <- NULL
-                # for (i in opens){
-                #     #print(paste0("i$contentType=",i$contentType)) #DEBUG-RM
-                #     txt <- i$name
-                #print("BEFORE test opens") #DEBUG-TEMP
-                print(paste0("length(opens) = ",length(opens))) #DEBUG-TEMP
-                # if (length(opens) == 0){ #DEBUG-TEMP
-                #     return(NULL)
-                # }
-                #print(" AFTER test opens") #DEBUG-TEMP
-                if (length(opens) > 0){
-                    for (i in 1:length(opens)){ #DEBUG-REVERT
-                        txt <- opens[i] %>% html_text() #DEBUG-REVERT
-                        if (txt %in% filenames) next #DEBUG-TEST2
-                        if (input$allfiles){
-                            if (input$countyfiles){
-                                pattern <- paste0("^(\\d+)__",tolower(input$state2),
-                                                  "__(\\w+)__(\\w+).csv$")
-                            }
-                            else{
-                                pattern <- paste0("^(\\d+)__",tolower(input$state2),
-                                                  "__(\\w+).csv$")
-                            }
-                        }
-                        else if (input$state2 == "WI"){
-                            if (input$countyfiles){
-                                pattern <- paste0("^(\\d+)__",tolower(input$state2),
-                                                  "__(\\w+)__(\\w+)__ward.csv$")
-                            }
-                            else{
-                                pattern <- paste0("^(\\d+)__",tolower(input$state2),
-                                                  "__(\\w+)__ward.csv$")
-                            }
+            else{
+                sarea <- "precinct"
+            }
+            url <- paste0("https://api.github.com/repos/openelections/openelections-data-",
+                          tolower(input$state2),"/git/trees/master?recursive=1")
+            resp <- GET(url)
+            #stop_for_status(resp) #causes 'Warning: Error in getElections: Forbidden (HTTP 403)'
+            files_all <- content(resp)$tree
+            # Extract paths
+            file_paths <- vapply(files_all, function(x) x$path, character(1))
+            # Filter for the 2024/counties directory
+            #counties_files <- grep("^2024/counties/", file_paths, value = TRUE)
+            if (input$countyfiles){
+                counties_files <- grep(paste0("^",input$xyear,"/counties/"), file_paths, value = TRUE)
+                pattern <- paste0("^",input$xyear,"/counties/(\\d+)__",tolower(input$state2),"__(\\w+)__(\\w+)__",sarea,".csv$")
+            }
+            else{
+                counties_files <- grep(paste0("^",input$xyear,"/"), file_paths, value = TRUE)
+                pattern <- paste0("^",input$xyear,"/(\\d+)__",tolower(input$state2),"__(\\w+)__",sarea,".csv$")
+            }
+            mm <- str_match(file_paths, pattern)
+            opens <- mm[,1]
+            opens <- opens[!is.na(opens)]
+            if (input$countyfiles){
+                opens <- substring(opens,15)
+            }
+            else{
+                opens <- substring(opens,6)
+            }
+            filenames <- NULL #DEBUG 250818
+            elections <- NULL
+            counties  <- NULL
+            if (length(opens) > 0){
+                for (i in 1:length(opens)){
+                    txt <- opens[i] # %>% html_text()
+                    if (txt %in% filenames) next
+                    if (input$allfiles){
+                        if (input$countyfiles){
+                            pattern <- paste0("^(\\d+)__",tolower(input$state2),
+                                              "__(\\w+)__(\\w+).csv$")
                         }
                         else{
-                            if (input$countyfiles){
-                                pattern <- paste0("^(\\d+)__",tolower(input$state2),
-                                                  "__(\\w+)__(\\w+)__precinct.csv$")
-                            }
-                            else{
-                                pattern <- paste0("^(\\d+)__",tolower(input$state2),
-                                                  "__(\\w+)__precinct.csv$")
-                            }
+                            pattern <- paste0("^(\\d+)__",tolower(input$state2),
+                                              "__(\\w+).csv$")
                         }
-                        print(paste0("str_match(",txt,"|",pattern,"|")) #DEBUG_TMP
-                        mm <- str_match(txt, pattern)
-                        zmm <<- mm #DEBUG-RM2
-                        ztxt <<- txt #DEBUG-RM2
-                        zpattern <<- pattern #DEBUG-RM2
-                        if(!is.na(mm[1,1])){
-                            filenames <- c(filenames, txt)
-                            election <- paste0(mm[1,2],"__",tolower(input$state2),"__",mm[1,3])
-                            print(paste0("election=|",election,"|")) #DEBUG_TMP
-                            elections <- c(elections, election)
-                            if (input$countyfiles){
-                                counties <- c(counties, str_to_title(mm[1,4]))
-                            }
-                            else{
-                                counties <- c(counties, "")
-                            }
+                    }
+                    else if (input$state2 == "WI"){
+                        if (input$countyfiles){
+                            pattern <- paste0("^(\\d+)__",tolower(input$state2),
+                                              "__(\\w+)__(\\w+)__ward.csv$")
+                        }
+                        else{
+                            pattern <- paste0("^(\\d+)__",tolower(input$state2),
+                                              "__(\\w+)__ward.csv$")
+                        }
+                    }
+                    else{
+                        if (input$countyfiles){
+                            pattern <- paste0("^(\\d+)__",tolower(input$state2),
+                                              "__(\\w+)__(\\w+)__precinct.csv$")
+                        }
+                        else{
+                            pattern <- paste0("^(\\d+)__",tolower(input$state2),
+                                              "__(\\w+)__precinct.csv$")
+                        }
+                    }
+                    print(paste0("str_match(",txt,"|",pattern,"|")) #DEBUG_TMP
+                    mm <- str_match(txt, pattern)
+                    zmm <<- mm #DEBUG-RM
+                    ztxt <<- txt #DEBUG-RM
+                    zpattern <<- pattern #DEBUG-RM
+                    if(!is.na(mm[1,1])){
+                        filenames <- c(filenames, txt)
+                        election <- paste0(mm[1,2],"__",tolower(input$state2),"__",mm[1,3])
+                        print(paste0("election=|",election,"|")) #DEBUG_TMP
+                        elections <- c(elections, election)
+                        if (input$countyfiles){
+                            counties <- c(counties, str_to_title(mm[1,4]))
+                        }
+                        else{
+                            counties <- c(counties, "")
                         }
                     }
                 }
-            } #DEBUG_241108 - FIX FOR MISSING YEAR DIRECTORY IN OE (LIKE GA 2024)
-                cfiles <<- data.frame(filenames, elections, counties)
-                if (tolower(input$state2) == "wi"){
-                    exfilenames <- list.files(path = "data",pattern = paste0(input$xyear,"(\\d+)__",tolower(input$state2),
-                                                                             "__(\\w+)__ward.csv$"))
-                    subchar <- 10
-                }
-                else{
-                    exfilenames <- list.files(path = "data",pattern = paste0(input$xyear,"(\\d+)__",tolower(input$state2),
-                                                                             "__(\\w+)__precinct.csv$"))
-                    subchar <- 14
-                }
-                if (!is.null(exfilenames)){
-                    for (ff in exfilenames){
-                        if (!(ff %in% cfiles$filenames)){
-                            addfile <- data.frame(ff,substr(ff,1,nchar(ff)-subchar),"")
-                            names(addfile) <- c("filenames","elections","counties")
-                            cfiles <<- rbind(cfiles,addfile)
-                        }
+            }
+            #DEBUG_241108 - FIX FOR MISSING YEAR DIRECTORY IN OE (LIKE GA 2024)
+            filenames <- c(filenames,"--------")
+            elections <- c(elections,"--------")
+            counties  <- c(counties,"")
+            cfiles <<- data.frame(filenames, elections, counties)
+            if (tolower(input$state2) == "wi"){
+                exfilenames <- list.files(path = "data",pattern = paste0(input$xyear,"(\\d+)__",tolower(input$state2),
+                                                                         "__(\\w+)__ward.csv$"))
+                subchar <- 10
+            }
+            else{
+                exfilenames <- list.files(path = "data",pattern = paste0(input$xyear,"(\\d+)__",tolower(input$state2),
+                                                                         "__(\\w+)__precinct.csv$"))
+                subchar <- 14
+            }
+            if (!is.null(exfilenames)){
+                for (ff in exfilenames){
+                    if (!(ff %in% cfiles$filenames)){
+                        addfile <- data.frame(ff,substr(ff,1,nchar(ff)-subchar),"")
+                        names(addfile) <- c("filenames","elections","counties")
+                        cfiles <<- rbind(cfiles,addfile)
                     }
                 }
-                uelections <- unique(cfiles$elections)
-                print(uelections) #DEBUG
-                updateSelectInput(session,"xelection",choices = uelections,selected = uelections[1])
-            ###} #DEBUG_241108 - FIX FOR MISSING YEAR DIRECTORY IN OE (LIKE GA 2024)
+            }
+            uelections <- unique(cfiles$elections)
+            print(uelections) #DEBUG
+            updateSelectInput(session,"xelection",choices = uelections,selected = uelections[1])
+            #updateSelectInput(session,"xelection",choices = uelections,selected = uelections[length(uelections)]) #DEBUG_FIX_250213
         }
         observeEvent(input$state2,{
             print(paste0("START observeEvent(",input$state2,")"))
@@ -3640,11 +3611,54 @@ shinyServer(
         })
         observeEvent(input$xelection,{
             print(paste0("START observeEventElection(",input$xelection,")"))
-            if (input$xelection != ""){
+            if (input$xelection != "" & input$xelection != "--------"){ #DEBUG 250816
                 #getElectionfile()
                 efiles <- unique(cfiles[as.character(cfiles$elections) == input$xelection,])
                 ucounties <- unique(as.character(efiles$counties))
-                if (!input$countyfiles){
+                if (input$countyfiles){
+                    filename <- unique(efiles$filenames) #DEBUG2 - use unique for duplicate filenames
+                    xx <- NULL
+                    for (fn in filename){
+                        filepath <- paste0("https://github.com/openelections/openelections-data-",
+                                           tolower(input$state2),"/raw/master/",input$xyear,"/counties/",fn)
+                        catmsg(paste0("<--- 10c)read_csv(",filepath,")")) #DEBUG
+                        yy <- read_csv(filepath, guess_max = 1000000)
+                        yy <- fixdata(yy)
+                        wanted_cols <- c("county","precinct","office","district","party","candidate","votes")
+                        yy <- yy %>% select(any_of(wanted_cols))
+                        if (!("county" %in% names(yy))){
+                            if (input$state2 == "WI") sarea <- "ward"
+                            else sarea <- "precinct"
+                            pattern <- paste0("^(\\d+)__",tolower(input$state2),"__(\\w+)__(\\w+)__",sarea,".csv$")
+                            mm <- str_match(fn, pattern)
+                            yy <- data.frame(county = str_to_title(mm[,4]), yy)
+                            catmsg(paste0("~~~~> Create county=|",str_to_title(mm[,4]),"|"))
+                        }
+                        validate_counties(yy, input$xelection, filename)
+                        if (is.null(xx)){
+                            xx <- yy
+                        }
+                        else{
+                            if (all(names(yy) == names(xx))){
+                                xx <- rbind(xx, yy)
+                            }
+                            else{
+                                catmsg(paste0("!!!!> Non-matching names for ",fn))
+                            }
+                        }
+                        # if (file.exists(data_path)){
+                        #     catmsg(paste0("====> write_csv(",localpath,")"))
+                        #     write_csv(xx, localpath)
+                        # }
+                    }
+                    if (input$state2 == "WI") sarea <- "ward"
+                    else sarea <- "precinct"
+                    ucounties <- unique(xx$county)
+                    data_path <- "data"
+                    localpath <- paste0(data_path,"/",input$xelection,"__",sarea,".csv")
+                    write_csv(xx, localpath)
+                }
+                else{
                     filename <- unique(efiles$filenames) #DEBUG2 - use unique for duplicate filenames
                     data_path <- "data"
                     localpath <- paste0(data_path,"/",filename)
@@ -3654,10 +3668,6 @@ shinyServer(
                         xx <- fixdata(xx)
                     }
                     else{
-                        # filepath <- paste0("https://raw.githubusercontent.com/openelections/openelections-data-",
-                        #                    tolower(input$state2),"/master/",input$xyear,"/",filename)
-                        #                   https://github.com/openelections/openelections-data-fl/blob/master/2022/20221108__fl__general__precinct.csv
-                        #                   https://github.com/openelections/openelections-data-fl/raw/master/2022/20221108__fl__general__precinct.csv
                         filepath <- paste0("https://github.com/openelections/openelections-data-",
                                            tolower(input$state2),"/raw/master/",input$xyear,"/",filename)
                         #xx <- read_csv(filepath)
@@ -3678,6 +3688,7 @@ shinyServer(
                 }
                 ucounties <- sort(ucounties)
                 ucounties <- c(ucounties,"(all)")
+                zucounties <<- ucounties
                 updateSelectInput(session,"xcounty",choices = ucounties,selected = xcounty)
                 # add from end of observeEvent(input$xcounty
                 uoffices <- unique(xx$office)
@@ -3743,7 +3754,6 @@ shinyServer(
                 print(paste0("  END observeEventCounty(",input$xcounty,")")) #DEBUG-TEMP
             }
         })
-        #observeEvent(input$xoffice,{
         observeEvent(input$addrace,{
             #getCounties()
             state <- input$state2
@@ -3774,6 +3784,18 @@ shinyServer(
         })
         observeEvent(input$clrrace,{
             updateSelectInput(session,"xraces",choices = "",selected = "")
+        })
+        observeEvent(input$prior_county,{
+            nn <- length(zucounties)
+            ii <- which(zucounties == input$xcounty) - 1
+            if (ii < 1) ii <- nn
+            updateSelectInput(session,"xcounty",choices = zucounties,selected = zucounties[ii])
+        })
+        observeEvent(input$next_county,{
+            nn <- length(zucounties)
+            ii <- which(zucounties == input$xcounty) + 1
+            if (ii > nn) ii <- 1
+            updateSelectInput(session,"xcounty",choices = zucounties,selected = zucounties[ii])
         })
         observeEvent(input$sortcounty,{
             if (input$sortcounty == "COUNTY"){

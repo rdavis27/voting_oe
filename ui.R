@@ -2,7 +2,7 @@ library(leaflet)
 library(plotly)
 
 shinyUI(pageWithSidebar(
-    headerPanel("Analysis of Reported Voting Areas using Open Elections Data"),
+    headerPanel("Analysis of Reported Voting Areas using Open Elections Data, V2"),
     sidebarPanel(
         width = 2,
         selectInput("state2", "STATE",
@@ -30,6 +30,12 @@ shinyUI(pageWithSidebar(
                     choices = c("Wayne"),
                     selected = "Wayne",
                     multiple = FALSE),
+        splitLayout(
+            actionButton("prior_county", "PRIOR",
+                         style="color: #fff; background-color: #337ab7; border-color: #2e6da4"),
+            actionButton("next_county", "NEXT",
+                         style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
+        ),
         selectInput("xoffice", "OFFICE",
                     choices = c("Registered Voters",
                                 "President"),
@@ -37,9 +43,9 @@ shinyUI(pageWithSidebar(
                     multiple = FALSE),
         splitLayout(
             actionButton("addrace", "ADD RACE",
-                         style="color: #fff; background-color: #337ab7; border-color: #2e6da4"),
+                         style="color: #fff; background-color: #00aa00; border-color: #2e6da4"),
             actionButton("clrrace", "CLEAR",
-                         style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
+                         style="color: #fff; background-color: #ff0000; border-color: #2e6da4")
         ),
         selectInput("xraces", "RACES",
                     choices  = c("FL_221108_Governor","FL_221108_U.S. Senate"),
